@@ -63,7 +63,11 @@ export const api = {
     request("/auth/login", { method: "POST", body: JSON.stringify(payload) }),
   me: () => request("/auth/me"),
   trending: () => request("/movies/trending"),
-  searchMovies: (query) => request(`/movies/search?q=${encodeURIComponent(query)}`),
+  popularMovies: (page = 1) => request(`/movies/popular?page=${page}`),
+  topRatedMovies: (page = 1) => request(`/movies/top-rated?page=${page}`),
+  discoverMovies: (page = 1) => request(`/movies/discover?page=${page}`),
+  searchMovies: (query, page = 1) =>
+    request(`/movies/search?q=${encodeURIComponent(query)}&page=${page}`),
   movie: (id) => request(`/movies/${id}`),
   rateMovie: (id, payload) =>
     request(`/ratings/movies/${id}`, {
