@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="750" viewBox="0 0 500 750" role="img" aria-label="Movie poster placeholder">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f2937" />
+      <stop offset="100%" stop-color="#111827" />
+    </linearGradient>
+  </defs>
+  <rect width="500" height="750" fill="url(#g)" />
+  <rect x="30" y="30" width="440" height="690" rx="20" fill="none" stroke="#374151" stroke-width="6" />
+  <g fill="#9ca3af" font-family="Inter, sans-serif" text-anchor="middle">
+    <text x="250" y="340" font-size="48" font-weight="600">FLIKTOX</text>
+    <text x="250" y="390" font-size="26">No Poster Available</text>
+  </g>
+</svg>
