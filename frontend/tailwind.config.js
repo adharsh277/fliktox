@@ -5,7 +5,7 @@ module.exports = {
     extend: {
       fontFamily: {
         display: ["Bebas Neue", "sans-serif"],
-        body: ["Space Grotesk", "sans-serif"]
+        body: ["Inter", "sans-serif"]
       },
       colors: {
         abyss: "#07131f",
