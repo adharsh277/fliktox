@@ -13,6 +13,8 @@ export default function MoviePage() {
   const [form, setForm] = useState({ rating: 5, review: "", watched: true, watchlist: false });
   const [status, setStatus] = useState("");
 
+  const releaseYear = movie?.release_date ? String(movie.release_date).slice(0, 4) : "-";
+
   useEffect(() => {
     if (!movieId) return;
 
@@ -49,12 +51,29 @@ export default function MoviePage() {
                 {movie.poster_url ? (
                   <img src={movie.poster_url} alt={movie.title} className="h-full w-full object-cover" />
                 ) : (
-                  <div className="aspect-[2/3] grid place-items-center text-mist/70">No poster</div>
+                  <img
+                    src="/images/movie-placeholder.svg"
+                    alt="No poster available"
+                    className="h-full w-full object-cover"
+                  />
                 )}
               </div>
               <div>
                 <h1 className="font-display text-6xl tracking-wide text-gold">{movie.title}</h1>
-                <p className="mt-2 text-sm text-mist/75">Average Rating: {summary.averageRating} ({summary.totalRatings} ratings)</p>
+                <p className="mt-2 text-sm text-mist/75">
+                  Fliktox Rating: {summary.averageRating} ({summary.totalRatings} ratings)
+                </p>
+                <p className="mt-1 text-sm text-mist/75">TMDB Rating: {movie.vote_average?.toFixed?.(1) || movie.vote_average || "-"}</p>
+                <div className="mt-3 grid gap-2 text-sm text-mist/80 md:grid-cols-2">
+                  <p><span className="text-mist">Year:</span> {releaseYear}</p>
+                  <p><span className="text-mist">Runtime:</span> {movie.runtime || "-"} min</p>
+                  <p className="md:col-span-2">
+                    <span className="text-mist">Genres:</span>{" "}
+                    {(movie.genres || []).map((genre) => genre.name).join(" • ") || "-"}
+                  </p>
+                  <p><span className="text-mist">Director:</span> {movie.director?.name || "-"}</p>
+                  <p><span className="text-mist">Producer:</span> {movie.producer?.name || "-"}</p>
+                </div>
                 <p className="mt-4 text-mist/85">{movie.overview || "Synopsis unavailable."}</p>
 
                 <form onSubmit={onRate} className="card-surface mt-6 rounded-2xl p-4">
@@ -76,6 +95,21 @@ export default function MoviePage() {
                 </form>
               </div>
             </div>
+
+            <section className="mt-8">
+              <h2 className="font-display text-4xl tracking-wide text-gold">Top Cast</h2>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                {(movie.cast || []).slice(0, 9).map((member) => (
+                  <div key={member.id} className="card-surface rounded-xl p-3">
+                    <p className="font-medium text-mist">{member.name}</p>
+                    <p className="text-sm text-mist/75">{member.character || "Cast"}</p>
+                  </div>
+                ))}
+                {!(movie.cast || []).length ? (
+                  <p className="text-sm text-mist/75">Cast information unavailable.</p>
+                ) : null}
+              </div>
+            </section>
           </>
         ) : (
           <div className="text-mist/75">Loading movie...</div>

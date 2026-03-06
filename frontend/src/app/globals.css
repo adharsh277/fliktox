@@ -1,16 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg: #07131f;
-  --bg-soft: #0e2133;
-  --text: #d7e3f4;
-  --text-muted: #9db1c9;
-  --accent: #eb5e28;
-  --highlight: #f3b61f;
+  --bg: #0b0f19;
+  --text: #ffffff;
+  --text-muted: #9ca3af;
+  --accent: #ffb800;
+  --highlight: #ff4c4c;
 }
 
 * {
@@ -22,12 +21,10 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100%;
-  background:
-    radial-gradient(circle at 15% 20%, rgba(243, 182, 31, 0.12), transparent 32%),
-    radial-gradient(circle at 85% 10%, rgba(235, 94, 40, 0.16), transparent 35%),
-    linear-gradient(180deg, #07131f 0%, #0d1a2a 60%, #13253a 100%);
+  background: var(--bg);
   color: var(--text);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Inter', sans-serif;
+  scroll-behavior: smooth;
 }
 
 a {
@@ -46,4 +43,18 @@ select {
   border: 1px solid rgba(215, 227, 244, 0.14);
   background: rgba(6, 16, 26, 0.72);
   backdrop-filter: blur(8px);
+}
+
+.glass-card {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(14px);
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
 }
