@@ -13,9 +13,40 @@ import { healthRouter } from "./routes/health.js";
 
 export const app = express();
 
+const configuredOrigins = (env.clientOrigin || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+function isAllowedOrigin(origin) {
+  if (!origin) {
+    return true;
+  }
+
+  if (configuredOrigins.includes(origin)) {
+    return true;
+  }
+
+  if (/^http:\/\/localhost:\d+$/.test(origin)) {
+    return true;
+  }
+
+  if (/^https:\/\/.*\.(app\.github\.dev|githubpreview\.dev)$/.test(origin)) {
+    return true;
+  }
+
+  return false;
+}
+
 app.use(
   cors({
-    origin: env.clientOrigin,
+    origin: (origin, callback) => {
+      if (isAllowedOrigin(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Origin not allowed by CORS"));
+    },
     credentials: true
   })
 );

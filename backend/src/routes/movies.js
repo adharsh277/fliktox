@@ -1,5 +1,12 @@
 import { Router } from "express";
-import { getMovieDetails, getTrendingMovies, searchMovies } from "../utils/tmdb.js";
+import {
+  discoverMovies,
+  getMovieDetails,
+  getPopularMovies,
+  getTopRatedMovies,
+  getTrendingMovies,
+  searchMovies
+} from "../utils/tmdb.js";
 
 export const moviesRouter = Router();
 
@@ -13,14 +20,48 @@ moviesRouter.get("/trending", async (_, res) => {
   }
 });
 
+moviesRouter.get("/popular", async (req, res) => {
+  const page = Number(req.query.page || 1);
+  try {
+    const movies = await getPopularMovies(page);
+    return res.json(movies);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to fetch popular movies" });
+  }
+});
+
+moviesRouter.get("/top-rated", async (req, res) => {
+  const page = Number(req.query.page || 1);
+  try {
+    const movies = await getTopRatedMovies(page);
+    return res.json(movies);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to fetch top rated movies" });
+  }
+});
+
+moviesRouter.get("/discover", async (req, res) => {
+  const page = Number(req.query.page || 1);
+  try {
+    const movies = await discoverMovies(page);
+    return res.json(movies);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Failed to fetch discover movies" });
+  }
+});
+
 moviesRouter.get("/search", async (req, res) => {
   const query = String(req.query.q || "").trim();
+  const page = Number(req.query.page || 1);
   if (!query) {
     return res.json([]);
   }
 
   try {
-    const movies = await searchMovies(query);
+    const movies = await searchMovies(query, page);
     return res.json(movies);
   } catch (error) {
     console.error(error);
