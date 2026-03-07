@@ -82,7 +82,7 @@ function fallbackMovieDetails(tmdbId) {
 function withPoster(movie) {
   return {
     ...movie,
-    poster_url: movie.poster_path ? `${TMDB_IMAGE}${movie.poster_path}` : ""
+    poster_url: movie.poster_path ? `${TMDB_IMAGE}${movie.poster_path}` : null
   };
 }
 
