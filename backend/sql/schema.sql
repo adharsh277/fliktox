@@ -46,6 +46,29 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT DEFAULT '';
+
+CREATE TABLE IF NOT EXISTS lists (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  title VARCHAR(200) NOT NULL,
+  description TEXT DEFAULT '',
+  is_public BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS list_movies (
+  id SERIAL PRIMARY KEY,
+  list_id INTEGER REFERENCES lists(id) ON DELETE CASCADE,
+  tmdb_id INTEGER NOT NULL,
+  position INTEGER DEFAULT 0,
+  added_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE (list_id, tmdb_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_ratings_user_id ON ratings(user_id);
 CREATE INDEX IF NOT EXISTS idx_friends_user_id ON friends(user_id);
 CREATE INDEX IF NOT EXISTS idx_messages_pair ON messages(sender_id, receiver_id);
+CREATE INDEX IF NOT EXISTS idx_lists_user_id ON lists(user_id);
+CREATE INDEX IF NOT EXISTS idx_list_movies_list_id ON list_movies(list_id);
