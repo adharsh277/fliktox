@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import { api } from "../lib/api";
 
@@ -10,6 +10,13 @@ export default function ChatPanel({ friends = [] }) {
   const [selectedId, setSelectedId] = useState(friends[0]?.id || null);
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState("");
+  const socketRef = useRef(null);
+  const selectedIdRef = useRef(selectedId);
+
+  // Keep ref in sync so socket callback sees the latest value
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+  }, [selectedId]);
 
   useEffect(() => {
     if (!selectedId && friends.length) {
@@ -22,6 +29,7 @@ export default function ChatPanel({ friends = [] }) {
     [friends, selectedId]
   );
 
+  // Fetch message history when friend changes
   useEffect(() => {
     if (!selectedId) {
       setMessages([]);
@@ -31,6 +39,7 @@ export default function ChatPanel({ friends = [] }) {
     api.messages(selectedId).then(setMessages).catch(() => setMessages([]));
   }, [selectedId]);
 
+  // Single socket connection for the entire component lifetime
   useEffect(() => {
     const token = localStorage.getItem("fliktox_token");
     if (!token) {
@@ -38,17 +47,28 @@ export default function ChatPanel({ friends = [] }) {
     }
 
     const socket = io(SOCKET_URL, {
-      auth: { token }
+      auth: { token },
+      reconnection: true,
+      reconnectionDelay: 1000
     });
+    socketRef.current = socket;
 
     socket.on("private:message", (msg) => {
-      if (msg.sender_id === selectedId || msg.receiver_id === selectedId) {
-        setMessages((prev) => [...prev, msg]);
+      const currentFriend = selectedIdRef.current;
+      if (msg.sender_id === currentFriend || msg.receiver_id === currentFriend) {
+        setMessages((prev) => {
+          // Deduplicate by id
+          if (prev.some((m) => m.id === msg.id)) return prev;
+          return [...prev, msg];
+        });
       }
     });
 
-    return () => socket.disconnect();
-  }, [selectedId]);
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, []); // connect once
 
   async function onSendMessage(e) {
     e.preventDefault();
@@ -57,7 +77,10 @@ export default function ChatPanel({ friends = [] }) {
     }
 
     const sent = await api.sendMessage(selectedId, messageInput.trim());
-    setMessages((prev) => [...prev, sent]);
+    setMessages((prev) => {
+      if (prev.some((m) => m.id === sent.id)) return prev;
+      return [...prev, sent];
+    });
     setMessageInput("");
   }
 
