@@ -1,12 +1,33 @@
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
-import { pool } from "../db/pool.js";
+
+let io;
+
+const configuredOrigins = (env.clientOrigin || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true;
+  if (configuredOrigins.includes(origin)) return true;
+  if (/^http:\/\/localhost:\d+$/.test(origin)) return true;
+  if (/^https:\/\/.*\.(app\.github\.dev|githubpreview\.dev)$/.test(origin)) return true;
+  return false;
+}
+
+export function getIO() {
+  return io;
+}
 
 export function registerChatSocket(httpServer) {
-  const io = new Server(httpServer, {
+  io = new Server(httpServer, {
     cors: {
-      origin: env.clientOrigin,
+      origin: (origin, cb) => {
+        if (isAllowedOrigin(origin)) return cb(null, true);
+        return cb(new Error("Origin not allowed by CORS"));
+      },
       credentials: true
     }
   });
@@ -30,26 +51,5 @@ export function registerChatSocket(httpServer) {
   io.on("connection", (socket) => {
     const userId = socket.data.user.id;
     socket.join(`user:${userId}`);
-
-    socket.on("private:message", async (payload) => {
-      const receiverId = Number(payload?.receiverId);
-      const text = String(payload?.message || "").trim();
-      if (!receiverId || !text) {
-        return;
-      }
-
-      const { rows } = await pool.query(
-        `
-        INSERT INTO messages (sender_id, receiver_id, message)
-        VALUES ($1, $2, $3)
-        RETURNING id, sender_id, receiver_id, message, created_at
-        `,
-        [userId, receiverId, text]
-      );
-
-      const msg = rows[0];
-      io.to(`user:${receiverId}`).emit("private:message", msg);
-      io.to(`user:${userId}`).emit("private:message", msg);
-    });
   });
 }

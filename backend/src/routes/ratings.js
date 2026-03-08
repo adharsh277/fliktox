@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { pool } from "../db/pool.js";
 import { requireAuth } from "../middleware/auth.js";
+import { getIO } from "../socket/chatSocket.js";
 
 export const ratingsRouter = Router();
 
@@ -27,7 +28,28 @@ ratingsRouter.post("/movies/:tmdbId", requireAuth, async (req, res) => {
     [req.user.id, tmdbId, rating, review || null, watched, watchlist]
   );
 
-  return res.json(rows[0]);
+  const ratingRow = rows[0];
+
+  // Emit live feed event to all friends
+  const io = getIO();
+  if (io) {
+    const { rows: friendRows } = await pool.query(
+      `SELECT friend_id FROM friends WHERE user_id = $1 AND status = 'accepted'`,
+      [req.user.id]
+    );
+    const feedItem = {
+      username: req.user.username,
+      tmdb_id: tmdbId,
+      rating,
+      review: review || null,
+      updated_at: ratingRow.updated_at
+    };
+    for (const f of friendRows) {
+      io.to(`user:${f.friend_id}`).emit("feed:newRating", feedItem);
+    }
+  }
+
+  return res.json(ratingRow);
 });
 
 ratingsRouter.get("/movies/:tmdbId/summary", async (req, res) => {
