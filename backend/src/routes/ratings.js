@@ -64,3 +64,20 @@ ratingsRouter.get("/users/:userId", async (req, res) => {
 
   return res.json(rows);
 });
+
+// Get all reviews for a movie (with user info)
+ratingsRouter.get("/movies/:tmdbId/reviews", async (req, res) => {
+  const tmdbId = Number(req.params.tmdbId);
+  const { rows } = await pool.query(
+    `
+    SELECT r.rating, r.review, r.updated_at,
+           u.id AS user_id, u.username, u.profile_photo
+    FROM ratings r
+    JOIN users u ON u.id = r.user_id
+    WHERE r.tmdb_id = $1 AND r.review IS NOT NULL AND r.review != ''
+    ORDER BY r.updated_at DESC
+    `,
+    [tmdbId]
+  );
+  return res.json(rows);
+});
