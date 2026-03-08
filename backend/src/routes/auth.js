@@ -94,3 +94,34 @@ authRouter.get("/me", requireAuth, async (req, res) => {
 
   return res.json(rows[0]);
 });
+
+authRouter.put("/change-password", requireAuth, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: "Current password and new password are required" });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: "New password must be at least 6 characters" });
+  }
+
+  const { rows } = await pool.query(
+    `SELECT password_hash FROM users WHERE id = $1`,
+    [req.user.id]
+  );
+
+  if (!rows[0]) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  const isValid = await bcrypt.compare(currentPassword, rows[0].password_hash);
+  if (!isValid) {
+    return res.status(401).json({ error: "Current password is incorrect" });
+  }
+
+  const newHash = await bcrypt.hash(newPassword, 10);
+  await pool.query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [newHash, req.user.id]);
+
+  return res.json({ ok: true });
+});
