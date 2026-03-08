@@ -87,7 +87,10 @@ function withPoster(movie) {
 }
 
 function mapMovieList(data, limit = 20) {
-  return (data?.results || []).slice(0, limit).map(withPoster);
+  return (data?.results || [])
+    .filter((movie) => movie.poster_path)
+    .slice(0, limit)
+    .map(withPoster);
 }
 
 function normalizeCrew(crew = []) {
