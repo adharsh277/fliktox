@@ -10,6 +10,10 @@ import { friendsRouter } from "./routes/friends.js";
 import { feedRouter } from "./routes/feed.js";
 import { messagesRouter } from "./routes/messages.js";
 import { healthRouter } from "./routes/health.js";
+import { listsRouter } from "./routes/lists.js";
+import { statsRouter } from "./routes/stats.js";
+import { recommendationsRouter } from "./routes/recommendations.js";
+import { profileRouter } from "./routes/profile.js";
 
 export const app = express();
 
@@ -61,6 +65,10 @@ app.use("/api/ratings", ratingsRouter);
 app.use("/api/friends", friendsRouter);
 app.use("/api/feed", feedRouter);
 app.use("/api/messages", messagesRouter);
+app.use("/api/lists", listsRouter);
+app.use("/api/stats", statsRouter);
+app.use("/api/recommendations", recommendationsRouter);
+app.use("/api/profile", profileRouter);
 
 app.use((_, res) => {
   res.status(404).json({ error: "Not found" });
