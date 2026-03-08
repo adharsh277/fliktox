@@ -20,7 +20,7 @@ const fallbackPosters = [
   "5KCVkau1HEl7ZzfPsKAPM0sMiKc.jpg"
 ].map((path) => `${TMDB_IMG}/${path}`);
 
-const socialFeed = [
+const defaultSocialFeed = [
   { user: "Rahul", action: "rated Interstellar", score: "★★★★★", poster: fallbackPosters[3] },
   { user: "Maya", action: "added Parasite to Watchlist", score: "", poster: fallbackPosters[7] },
   { user: "Arjun", action: "reviewed Dune", score: "★★★★☆", poster: fallbackPosters[1] }
@@ -109,6 +109,7 @@ export default function HomePage() {
   const [topRated, setTopRated] = useState([]);
   const [friendsWatching, setFriendsWatching] = useState([]);
   const [seen, setSeen] = useState({});
+  const [liveFeed, setLiveFeed] = useState([]);
   const { scrollYProgress } = useScroll();
   const ySlow = useTransform(scrollYProgress, [0, 1], ["0%", "-25%"]);
   const blur = useTransform(scrollYProgress, [0, 1], ["0px", "6px"]);
@@ -140,6 +141,15 @@ export default function HomePage() {
         setTopRated([]);
         setFriendsWatching([]);
       });
+
+    // Try to load real activity feed if user is logged in
+    const token = typeof window !== "undefined" ? localStorage.getItem("fliktox_token") : null;
+    if (token) {
+      fetch(`${API}/feed/activity`, { headers: { Authorization: `Bearer ${token}` } })
+        .then((res) => res.ok ? res.json() : [])
+        .then((data) => { if (Array.isArray(data) && data.length) setLiveFeed(data.slice(0, 5)); })
+        .catch(() => {});
+    }
   }, []);
 
   const heroLoop = useMemo(() => {
@@ -228,9 +238,12 @@ export default function HomePage() {
                 className="aspect-[2/3] w-full object-cover transition duration-300 group-hover:scale-105"
               />
               <div className="absolute inset-0 flex flex-col justify-end gap-2 bg-gradient-to-t from-black/85 to-transparent p-3 opacity-0 transition group-hover:opacity-100">
-                <button type="button" className="rounded-md bg-white/10 px-3 py-1 text-left text-sm">⭐ Rate</button>
-                <button type="button" className="rounded-md bg-white/10 px-3 py-1 text-left text-sm">👁 Mark watched</button>
-                <button type="button" className="rounded-md bg-white/10 px-3 py-1 text-left text-sm">➕ Add watchlist</button>
+                <span className="rounded-md bg-white/10 px-3 py-1 text-left text-sm">⭐ Rate</span>
+                <span className="rounded-md bg-white/10 px-3 py-1 text-left text-sm">👁 Mark watched</span>
+                <span className="rounded-md bg-white/10 px-3 py-1 text-left text-sm">➕ Add watchlist</span>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-2 py-1">
+                <p className="text-xs text-white/80 line-clamp-1">{movie.title}</p>
               </div>
             </Link>
           ))}
@@ -274,7 +287,19 @@ export default function HomePage() {
       <section className="mx-auto max-w-6xl px-4 py-8 md:px-6">
         <h2 className="font-display text-4xl tracking-wide text-[#ffb800] md:text-5xl">Social Activity</h2>
         <div className="mt-5 space-y-3">
-          {socialFeed.map((item) => (
+          {liveFeed.length > 0 ? liveFeed.map((item, idx) => (
+            <div key={`live-${item.tmdb_id}-${idx}`} className="glass-card flex items-center gap-3 rounded-2xl p-3 md:p-4">
+              <div className="grid h-11 w-11 place-items-center rounded-full bg-[#ff4c4c] font-semibold">{(item.username || "?")[0].toUpperCase()}</div>
+              <div className="flex-1">
+                <p className="text-sm md:text-base">
+                  <span className="font-semibold">{item.username}</span>
+                  {item.watched ? " watched" : " rated"} Movie #{item.tmdb_id}
+                  {item.rating ? <span className="text-[#ffb800]"> {"★".repeat(item.rating)}</span> : null}
+                </p>
+                {item.review && <p className="mt-1 text-xs text-[#9ca3af]">{item.review}</p>}
+              </div>
+            </div>
+          )) : defaultSocialFeed.map((item) => (
             <div key={`${item.user}-${item.action}`} className="glass-card flex items-center gap-3 rounded-2xl p-3 md:p-4">
               <div className="grid h-11 w-11 place-items-center rounded-full bg-[#ff4c4c] font-semibold">{item.user[0]}</div>
               <div className="flex-1">
