@@ -2,8 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import NavBar from "../../../components/NavBar";
-import { api } from "../../../lib/api";
+import { api, getCurrentUser } from "../../../lib/api";
+
+function StarDisplay({ rating }) {
+  return (
+    <span className="text-gold">
+      {"★".repeat(rating)}{"☆".repeat(5 - rating)}
+    </span>
+  );
+}
 
 function fallbackPoster(movie) {
   const id = Number(movie?.id || 0);
@@ -35,16 +44,25 @@ export default function MoviePage() {
   const [summary, setSummary] = useState({ averageRating: 0, totalRatings: 0 });
   const [form, setForm] = useState({ rating: 5, review: "", watched: true, watchlist: false });
   const [status, setStatus] = useState("");
+  const [reviews, setReviews] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [sentRequests, setSentRequests] = useState(new Set());
+  const [friendMsg, setFriendMsg] = useState("");
 
   const releaseYear = movie?.release_date ? String(movie.release_date).slice(0, 4) : "-";
 
   useEffect(() => {
+    setCurrentUser(getCurrentUser());
+  }, []);
+
+  useEffect(() => {
     if (!movieId) return;
 
-    Promise.all([api.movie(movieId), api.movieSummary(movieId)])
-      .then(([movieData, summaryData]) => {
+    Promise.all([api.movie(movieId), api.movieSummary(movieId), api.movieReviews(movieId)])
+      .then(([movieData, summaryData, reviewsData]) => {
         setMovie(movieData);
         setSummary(summaryData);
+        setReviews(Array.isArray(reviewsData) ? reviewsData : []);
       })
       .catch(() => setMovie(null));
   }, [movieId]);
@@ -58,8 +76,22 @@ export default function MoviePage() {
       const newSummary = await api.movieSummary(movieId);
       setSummary(newSummary);
       setStatus("Saved rating and review.");
+      // Refresh reviews
+      api.movieReviews(movieId).then((r) => setReviews(Array.isArray(r) ? r : [])).catch(() => {});
     } catch (error) {
       setStatus(error.message);
+    }
+  }
+
+  async function sendFriendRequest(userId) {
+    try {
+      await api.sendRequest(userId);
+      setSentRequests((prev) => new Set([...prev, userId]));
+      setFriendMsg("Friend request sent!");
+      setTimeout(() => setFriendMsg(""), 3000);
+    } catch (err) {
+      setFriendMsg(err.message);
+      setTimeout(() => setFriendMsg(""), 3000);
     }
   }
 
@@ -118,6 +150,55 @@ export default function MoviePage() {
                 </form>
               </div>
             </div>
+
+            {/* Reviews Section */}
+            <section className="mt-8">
+              <h2 className="font-display text-4xl tracking-wide text-gold">Reviews</h2>
+              {friendMsg && <p className="mt-2 text-sm text-gold">{friendMsg}</p>}
+              {reviews.length > 0 ? (
+                <div className="mt-4 grid gap-4">
+                  {reviews.map((r) => (
+                    <div key={`${r.user_id}-${r.updated_at}`} className="card-surface rounded-2xl p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          {r.profile_photo ? (
+                            <img src={r.profile_photo} alt={r.username} className="h-10 w-10 rounded-full object-cover" />
+                          ) : (
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-ember/30 text-sm font-bold text-gold">
+                              {r.username?.[0]?.toUpperCase()}
+                            </div>
+                          )}
+                          <div>
+                            <Link href={`/user/${r.username}`} className="font-medium text-gold hover:underline">
+                              {r.username}
+                            </Link>
+                            <div className="flex items-center gap-2 text-sm">
+                              <StarDisplay rating={r.rating} />
+                              <span className="text-mist/50">{new Date(r.updated_at).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                        {currentUser && currentUser.id !== r.user_id && !sentRequests.has(r.user_id) && (
+                          <button
+                            type="button"
+                            onClick={() => sendFriendRequest(r.user_id)}
+                            className="rounded-full border border-ember/50 px-3 py-1 text-xs text-ember hover:bg-ember/15"
+                          >
+                            Add Friend
+                          </button>
+                        )}
+                        {sentRequests.has(r.user_id) && (
+                          <span className="text-xs text-mist/50">Request Sent</span>
+                        )}
+                      </div>
+                      <p className="mt-3 text-sm text-mist/85">{r.review}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-4 text-sm text-mist/50">No reviews yet. Be the first to review!</p>
+              )}
+            </section>
 
             <section className="mt-8">
               <h2 className="font-display text-4xl tracking-wide text-gold">Top Cast</h2>
