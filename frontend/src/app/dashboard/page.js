@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { io } from "socket.io-client";
 import NavBar from "../../components/NavBar";
 import ActivityFeed from "../../components/ActivityFeed";
 import MoviePosterGrid from "../../components/MoviePosterGrid";
 import ChatPanel from "../../components/ChatPanel";
 import { api, getCurrentUser } from "../../lib/api";
+
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:4000";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -15,6 +18,7 @@ export default function DashboardPage() {
   const [search, setSearch] = useState("");
   const [results, setResults] = useState([]);
   const [trending, setTrending] = useState([]);
+  const socketRef = useRef(null);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -34,6 +38,28 @@ export default function DashboardPage() {
         setFriends([]);
       });
   }, [router]);
+
+  // Live feed updates via socket
+  useEffect(() => {
+    const token = localStorage.getItem("fliktox_token");
+    if (!token) return undefined;
+
+    const socket = io(SOCKET_URL, {
+      auth: { token },
+      reconnection: true,
+      reconnectionDelay: 1000
+    });
+    socketRef.current = socket;
+
+    socket.on("feed:newRating", (item) => {
+      setFeed((prev) => [item, ...prev]);
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, []);
 
   async function onSearch(e) {
     e.preventDefault();
