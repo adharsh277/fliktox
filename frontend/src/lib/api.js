@@ -75,6 +75,7 @@ export const api = {
       body: JSON.stringify(payload)
     }),
   movieSummary: (id) => request(`/ratings/movies/${id}/summary`),
+  movieReviews: (id) => request(`/ratings/movies/${id}/reviews`),
   profileRatings: (userId) => request(`/ratings/users/${userId}`),
   feed: () => request("/feed/activity"),
   friendList: () => request("/friends/list"),
@@ -86,5 +87,35 @@ export const api = {
     request(`/messages/${friendId}`, {
       method: "POST",
       body: JSON.stringify({ message })
-    })
+    }),
+
+  // Lists
+  myLists: () => request("/lists/mine"),
+  userLists: (userId) => request(`/lists/user/${userId}`),
+  getList: (listId) => request(`/lists/${listId}`),
+  createList: (payload) =>
+    request("/lists", { method: "POST", body: JSON.stringify(payload) }),
+  updateList: (listId, payload) =>
+    request(`/lists/${listId}`, { method: "PUT", body: JSON.stringify(payload) }),
+  deleteList: (listId) => request(`/lists/${listId}`, { method: "DELETE" }),
+  addMovieToList: (listId, tmdbId) =>
+    request(`/lists/${listId}/movies`, { method: "POST", body: JSON.stringify({ tmdb_id: tmdbId }) }),
+  removeMovieFromList: (listId, tmdbId) =>
+    request(`/lists/${listId}/movies/${tmdbId}`, { method: "DELETE" }),
+
+  // Stats
+  myStats: () => request("/stats/me"),
+  userStats: (userId) => request(`/stats/user/${userId}`),
+
+  // Recommendations
+  recommendations: () => request("/recommendations"),
+
+  // Profile
+  publicProfile: (username) => request(`/profile/${username}`),
+  updateProfile: (payload) =>
+    request("/profile/me/update", { method: "PUT", body: JSON.stringify(payload) }),
+
+  // Settings
+  changePassword: (payload) =>
+    request("/auth/change-password", { method: "PUT", body: JSON.stringify(payload) })
 };
