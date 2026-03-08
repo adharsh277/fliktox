@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { pool } from "../db/pool.js";
 import { requireAuth } from "../middleware/auth.js";
+import { getIO } from "../socket/chatSocket.js";
 
 export const messagesRouter = Router();
 messagesRouter.use(requireAuth);
@@ -42,5 +43,11 @@ messagesRouter.post("/:friendId", async (req, res) => {
     [userId, friendId, message]
   );
 
-  return res.status(201).json(rows[0]);
+  const msg = rows[0];
+  const io = getIO();
+  if (io) {
+    io.to(`user:${friendId}`).emit("private:message", msg);
+  }
+
+  return res.status(201).json(msg);
 });
