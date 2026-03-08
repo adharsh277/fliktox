@@ -2,9 +2,39 @@ version: "3"
 
 services:
 
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fliktox
+      POSTGRES_PASSWORD: fliktox
+      POSTGRES_DB: fliktox
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/sql/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    ports:
+      - "5432:5432"
+
   backend:
     build: ./backend
     ports:
       - "4000:4000"
-    env_file:
-      - ./backend/.env
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgres://fliktox:fliktox@db:5432/fliktox
+      JWT_SECRET: ${JWT_SECRET:-dev_secret}
+      CLIENT_ORIGIN: http://localhost:3000
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      BACKEND_URL: http://backend:4000
+
+volumes:
+  pgdata:
