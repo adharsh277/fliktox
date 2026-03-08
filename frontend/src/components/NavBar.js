@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { clearSession, getCurrentUser } from "../lib/api";
@@ -7,12 +8,19 @@ import { clearSession, getCurrentUser } from "../lib/api";
 export default function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
-  const user = typeof window !== "undefined" ? getCurrentUser() : null;
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    setUser(getCurrentUser());
+  }, []);
 
   const links = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/discover", label: "Discover" },
-    { href: user ? `/user/${user.username}` : "/login", label: "Profile" }
+    { href: "/lists", label: "Lists" },
+    { href: "/stats", label: "Stats" },
+    { href: user ? `/user/${user.username}` : "/login", label: "Profile" },
+    { href: "/settings", label: "Settings" }
   ];
 
   return (
