@@ -21,6 +21,9 @@ export function getIO() {
   return io;
 }
 
+// Track online user IDs
+const onlineUsers = new Set();
+
 export function registerChatSocket(httpServer) {
   io = new Server(httpServer, {
     cors: {
@@ -51,5 +54,28 @@ export function registerChatSocket(httpServer) {
   io.on("connection", (socket) => {
     const userId = socket.data.user.id;
     socket.join(`user:${userId}`);
+
+    // Mark online and broadcast
+    onlineUsers.add(userId);
+    socket.broadcast.emit("user:online", { userId });
+
+    // Send the full online list to the new connection
+    socket.emit("online:list", [...onlineUsers]);
+
+    // Typing indicator
+    socket.on("typing", ({ receiverId }) => {
+      if (receiverId) {
+        io.to(`user:${receiverId}`).emit("user:typing", { userId });
+      }
+    });
+
+    socket.on("disconnect", () => {
+      // Only mark offline if no other sockets for this user
+      const rooms = io.sockets.adapter.rooms.get(`user:${userId}`);
+      if (!rooms || rooms.size === 0) {
+        onlineUsers.delete(userId);
+        socket.broadcast.emit("user:offline", { userId });
+      }
+    });
   });
 }

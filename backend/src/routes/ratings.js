@@ -7,7 +7,7 @@ export const ratingsRouter = Router();
 
 ratingsRouter.post("/movies/:tmdbId", requireAuth, async (req, res) => {
   const tmdbId = Number(req.params.tmdbId);
-  const { rating, review, watched = false, watchlist = false } = req.body;
+  const { rating, review, watched = false, watchlist = false, movie_title } = req.body;
 
   if (!tmdbId || !Number.isInteger(rating) || rating < 1 || rating > 5) {
     return res.status(400).json({ error: "Valid tmdbId and rating (1-5) are required" });
@@ -30,6 +30,12 @@ ratingsRouter.post("/movies/:tmdbId", requireAuth, async (req, res) => {
 
   const ratingRow = rows[0];
 
+  // Log activity
+  await pool.query(
+    `INSERT INTO activity_feed (user_id, action, tmdb_id, metadata) VALUES ($1, $2, $3, $4)`,
+    [req.user.id, "rated", tmdbId, JSON.stringify({ rating, review: review || null, movie_title: movie_title || null })]
+  );
+
   // Emit live feed event to all friends
   const io = getIO();
   if (io) {
@@ -50,6 +56,77 @@ ratingsRouter.post("/movies/:tmdbId", requireAuth, async (req, res) => {
   }
 
   return res.json(ratingRow);
+});
+
+// ── Watchlist endpoints ──
+
+// Add to watchlist (no rating required)
+ratingsRouter.post("/watchlist/:tmdbId", requireAuth, async (req, res) => {
+  const tmdbId = Number(req.params.tmdbId);
+  if (!tmdbId) return res.status(400).json({ error: "Valid tmdbId required" });
+
+  const { rows } = await pool.query(
+    `INSERT INTO ratings (user_id, tmdb_id, watchlist)
+     VALUES ($1, $2, TRUE)
+     ON CONFLICT (user_id, tmdb_id)
+     DO UPDATE SET watchlist = TRUE, updated_at = NOW()
+     RETURNING *`,
+    [req.user.id, tmdbId]
+  );
+
+  await pool.query(
+    `INSERT INTO activity_feed (user_id, action, tmdb_id) VALUES ($1, 'watchlist_add', $2)`,
+    [req.user.id, tmdbId]
+  );
+
+  return res.json(rows[0]);
+});
+
+// Remove from watchlist
+ratingsRouter.delete("/watchlist/:tmdbId", requireAuth, async (req, res) => {
+  const tmdbId = Number(req.params.tmdbId);
+
+  await pool.query(
+    `UPDATE ratings SET watchlist = FALSE, updated_at = NOW()
+     WHERE user_id = $1 AND tmdb_id = $2`,
+    [req.user.id, tmdbId]
+  );
+
+  return res.json({ ok: true });
+});
+
+// Get user's watchlist
+ratingsRouter.get("/watchlist", requireAuth, async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT tmdb_id, rating, review, watched, updated_at
+     FROM ratings
+     WHERE user_id = $1 AND watchlist = TRUE
+     ORDER BY updated_at DESC`,
+    [req.user.id]
+  );
+  return res.json(rows);
+});
+
+// Mark movie as watched (no rating required)
+ratingsRouter.post("/watched/:tmdbId", requireAuth, async (req, res) => {
+  const tmdbId = Number(req.params.tmdbId);
+  if (!tmdbId) return res.status(400).json({ error: "Valid tmdbId required" });
+
+  const { rows } = await pool.query(
+    `INSERT INTO ratings (user_id, tmdb_id, watched)
+     VALUES ($1, $2, TRUE)
+     ON CONFLICT (user_id, tmdb_id)
+     DO UPDATE SET watched = TRUE, updated_at = NOW()
+     RETURNING *`,
+    [req.user.id, tmdbId]
+  );
+
+  await pool.query(
+    `INSERT INTO activity_feed (user_id, action, tmdb_id) VALUES ($1, 'watched', $2)`,
+    [req.user.id, tmdbId]
+  );
+
+  return res.json(rows[0]);
 });
 
 ratingsRouter.get("/movies/:tmdbId/summary", async (req, res) => {
