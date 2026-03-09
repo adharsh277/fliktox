@@ -72,7 +72,7 @@ export default function MoviePage() {
     setStatus("");
 
     try {
-      await api.rateMovie(movieId, { ...form, rating: Number(form.rating) });
+      await api.rateMovie(movieId, { ...form, rating: Number(form.rating), movie_title: movie?.title || null });
       const newSummary = await api.movieSummary(movieId);
       setSummary(newSummary);
       setStatus("Saved rating and review.");
