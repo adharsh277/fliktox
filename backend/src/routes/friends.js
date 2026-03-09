@@ -81,6 +81,22 @@ friendsRouter.get("/requests", async (req, res) => {
   return res.json(rows);
 });
 
+friendsRouter.post("/reject/:friendId", async (req, res) => {
+  const userId = req.user.id;
+  const friendId = Number(req.params.friendId);
+
+  const { rowCount } = await pool.query(
+    `DELETE FROM friends WHERE user_id = $1 AND friend_id = $2 AND status = 'pending'`,
+    [friendId, userId]
+  );
+
+  if (!rowCount) {
+    return res.status(404).json({ error: "Friend request not found" });
+  }
+
+  return res.json({ ok: true });
+});
+
 friendsRouter.get("/list", async (req, res) => {
   const { rows } = await pool.query(
     `
