@@ -14,6 +14,7 @@ import { listsRouter } from "./routes/lists.js";
 import { statsRouter } from "./routes/stats.js";
 import { recommendationsRouter } from "./routes/recommendations.js";
 import { profileRouter } from "./routes/profile.js";
+import { usersRouter } from "./routes/users.js";
 
 export const app = express();
 
@@ -69,6 +70,7 @@ app.use("/api/lists", listsRouter);
 app.use("/api/stats", statsRouter);
 app.use("/api/recommendations", recommendationsRouter);
 app.use("/api/profile", profileRouter);
+app.use("/api/users", usersRouter);
 
 app.use((_, res) => {
   res.status(404).json({ error: "Not found" });
