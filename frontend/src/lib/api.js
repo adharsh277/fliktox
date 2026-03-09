@@ -77,11 +77,20 @@ export const api = {
   movieSummary: (id) => request(`/ratings/movies/${id}/summary`),
   movieReviews: (id) => request(`/ratings/movies/${id}/reviews`),
   profileRatings: (userId) => request(`/ratings/users/${userId}`),
+  addToWatchlist: (tmdbId) =>
+    request(`/ratings/watchlist/${tmdbId}`, { method: "POST" }),
+  removeFromWatchlist: (tmdbId) =>
+    request(`/ratings/watchlist/${tmdbId}`, { method: "DELETE" }),
+  getWatchlist: () => request("/ratings/watchlist"),
+  markWatched: (tmdbId) =>
+    request(`/ratings/watched/${tmdbId}`, { method: "POST" }),
   feed: () => request("/feed/activity"),
   friendList: () => request("/friends/list"),
   friendRequests: () => request("/friends/requests"),
+  searchUsers: (q) => request(`/users/search?q=${encodeURIComponent(q)}`),
   sendRequest: (friendId) => request(`/friends/request/${friendId}`, { method: "POST" }),
   acceptRequest: (friendId) => request(`/friends/accept/${friendId}`, { method: "POST" }),
+  rejectRequest: (friendId) => request(`/friends/reject/${friendId}`, { method: "POST" }),
   messages: (friendId) => request(`/messages/${friendId}`),
   sendMessage: (friendId, message) =>
     request(`/messages/${friendId}`, {
