@@ -26,6 +26,7 @@ export default function DashboardPage() {
   const [userSearched, setUserSearched] = useState(false);
   const [sentIds, setSentIds] = useState(new Set());
   const [friendRequests, setFriendRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -44,7 +45,8 @@ export default function DashboardPage() {
       .catch(() => {
         setFeed([]);
         setFriends([]);
-      });
+      })
+      .finally(() => setLoading(false));
   }, [router]);
 
   // Live feed updates via socket
@@ -123,6 +125,14 @@ export default function DashboardPage() {
   return (
     <main>
       <NavBar />
+      {loading ? (
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="text-center">
+            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent" />
+            <p className="mt-3 text-sm text-mist/60">Loading dashboard...</p>
+          </div>
+        </div>
+      ) : (
       <section className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-8 md:px-6 lg:grid-cols-[1.1fr_0.9fr]">
         <div>
           <h1 className="font-display text-5xl tracking-wide text-gold">Home Dashboard</h1>
@@ -248,6 +258,7 @@ export default function DashboardPage() {
           <ChatPanel friends={friends} />
         </div>
       </section>
+      )}
     </main>
   );
 }
