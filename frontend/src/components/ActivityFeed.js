@@ -27,6 +27,14 @@ function actionLabel(item) {
       </>
     );
   }
+  if (action === "reviewed") {
+    return (
+      <>
+        reviewed {movieLink}{" "}
+        {rating && <span className="text-ember">{"★".repeat(rating)}{"☆".repeat(5 - rating)}</span>}
+      </>
+    );
+  }
   if (action === "watchlist_add") return <>added {movieLink} to watchlist</>;
   if (action === "watched") return <>watched {movieLink}</>;
   return (
