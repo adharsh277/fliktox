@@ -24,6 +24,7 @@ export default function DiscoverPage() {
   const [topRated, setTopRated] = useState([]);
   const [browseAll, setBrowseAll] = useState([]);
   const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
@@ -43,7 +44,8 @@ export default function DiscoverPage() {
         setPopular([]);
         setTopRated([]);
         setBrowseAll([]);
-      });
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -98,6 +100,16 @@ export default function DiscoverPage() {
           </button>
         </form>
 
+        {loading ? (
+          <div className="mt-12 flex items-center justify-center">
+            <div className="text-center">
+              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent" />
+              <p className="mt-3 text-sm text-mist/60">Loading movies...</p>
+            </div>
+          </div>
+        ) : (
+          <>
+
         {query.trim() ? (
           <section className="mt-8">
             <h2 className="font-display text-3xl tracking-wide text-gold">Search Results</h2>
@@ -136,6 +148,8 @@ export default function DiscoverPage() {
             </button>
           </div>
         </section>
+          </>
+        )}
       </section>
     </main>
   );
