@@ -14,10 +14,13 @@ feedRouter.get("/activity", async (req, res) => {
            a.metadata,
            a.created_at
     FROM activity_feed a
-    JOIN friends f ON f.friend_id = a.user_id
     JOIN users u ON u.id = a.user_id
-    WHERE f.user_id = $1
-      AND f.status = 'accepted'
+    WHERE (
+      a.user_id = $1
+      OR a.user_id IN (
+        SELECT friend_id FROM friends WHERE user_id = $1 AND status = 'accepted'
+      )
+    )
     ORDER BY a.created_at DESC
     LIMIT 50
     `,
