@@ -42,12 +42,14 @@ export default function MoviePage() {
   const movieId = useMemo(() => Number(params.id), [params.id]);
   const [movie, setMovie] = useState(null);
   const [summary, setSummary] = useState({ averageRating: 0, totalRatings: 0 });
-  const [form, setForm] = useState({ rating: 5, review: "", watched: true, watchlist: false });
+  const [form, setForm] = useState({ rating: 5, review: "", watched: false, watchlist: false });
   const [status, setStatus] = useState("");
   const [reviews, setReviews] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [sentRequests, setSentRequests] = useState(new Set());
   const [friendMsg, setFriendMsg] = useState("");
+  const [myRating, setMyRating] = useState(null);
+  const [actionLoading, setActionLoading] = useState("");
 
   const releaseYear = movie?.release_date ? String(movie.release_date).slice(0, 4) : "-";
 
@@ -67,19 +69,90 @@ export default function MoviePage() {
       .catch(() => setMovie(null));
   }, [movieId]);
 
+  // Load current user's existing rating/status for this movie
+  useEffect(() => {
+    if (!movieId || !currentUser) return;
+
+    api.myMovieRating(movieId)
+      .then((data) => {
+        if (data) {
+          setMyRating(data);
+          setForm({
+            rating: data.rating || 5,
+            review: data.review || "",
+            watched: data.watched || false,
+            watchlist: data.watchlist || false,
+          });
+        }
+      })
+      .catch(() => {});
+  }, [movieId, currentUser]);
+
   async function onRate(e) {
     e.preventDefault();
     setStatus("");
 
     try {
       await api.rateMovie(movieId, { ...form, rating: Number(form.rating), movie_title: movie?.title || null });
-      const newSummary = await api.movieSummary(movieId);
+      const [newSummary, newMine] = await Promise.all([
+        api.movieSummary(movieId),
+        api.myMovieRating(movieId),
+      ]);
       setSummary(newSummary);
+      if (newMine) {
+        setMyRating(newMine);
+        setForm({
+          rating: newMine.rating || 5,
+          review: newMine.review || "",
+          watched: newMine.watched || false,
+          watchlist: newMine.watchlist || false,
+        });
+      }
       setStatus("Saved rating and review.");
-      // Refresh reviews
       api.movieReviews(movieId).then((r) => setReviews(Array.isArray(r) ? r : [])).catch(() => {});
     } catch (error) {
       setStatus(error.message);
+    }
+  }
+
+  async function toggleWatchlist() {
+    if (!currentUser) return;
+    setActionLoading("watchlist");
+    try {
+      if (myRating?.watchlist) {
+        await api.removeFromWatchlist(movieId);
+      } else {
+        await api.addToWatchlist(movieId);
+      }
+      const updated = await api.myMovieRating(movieId);
+      if (updated) {
+        setMyRating(updated);
+        setForm((f) => ({ ...f, watchlist: updated.watchlist }));
+      } else {
+        setMyRating(null);
+        setForm((f) => ({ ...f, watchlist: false }));
+      }
+    } catch (err) {
+      setStatus(err.message);
+    } finally {
+      setActionLoading("");
+    }
+  }
+
+  async function toggleWatched() {
+    if (!currentUser) return;
+    setActionLoading("watched");
+    try {
+      await api.markWatched(movieId);
+      const updated = await api.myMovieRating(movieId);
+      if (updated) {
+        setMyRating(updated);
+        setForm((f) => ({ ...f, watched: updated.watched }));
+      }
+    } catch (err) {
+      setStatus(err.message);
+    } finally {
+      setActionLoading("");
     }
   }
 
@@ -130,6 +203,41 @@ export default function MoviePage() {
                   <p><span className="text-mist">Producer:</span> {movie.producer?.name || "-"}</p>
                 </div>
                 <p className="mt-4 text-mist/85">{movie.overview || "Synopsis unavailable."}</p>
+
+                {/* Quick Action Buttons */}
+                {currentUser && (
+                  <div className="mt-5 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={toggleWatchlist}
+                      disabled={actionLoading === "watchlist"}
+                      className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition ${
+                        myRating?.watchlist
+                          ? "border-gold bg-gold/15 text-gold"
+                          : "border-white/20 text-mist/80 hover:border-gold hover:text-gold"
+                      }`}
+                    >
+                      {myRating?.watchlist ? "✓ On Watchlist" : "+ Add to Watchlist"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={toggleWatched}
+                      disabled={actionLoading === "watched"}
+                      className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition ${
+                        myRating?.watched
+                          ? "border-emerald-400 bg-emerald-400/15 text-emerald-400"
+                          : "border-white/20 text-mist/80 hover:border-emerald-400 hover:text-emerald-400"
+                      }`}
+                    >
+                      {myRating?.watched ? "✓ Watched" : "👁 Mark as Watched"}
+                    </button>
+                    {myRating?.rating && (
+                      <span className="text-sm text-mist/60">
+                        Your rating: <StarDisplay rating={myRating.rating} />
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 <form onSubmit={onRate} className="card-surface mt-6 rounded-2xl p-4">
                   <h2 className="text-lg font-semibold text-mist">Rate / Review</h2>
