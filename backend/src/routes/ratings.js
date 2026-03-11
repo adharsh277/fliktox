@@ -129,6 +129,24 @@ ratingsRouter.post("/watched/:tmdbId", requireAuth, async (req, res) => {
   return res.json(rows[0]);
 });
 
+// Get current user's rating/status for a specific movie
+ratingsRouter.get("/movies/:tmdbId/mine", requireAuth, async (req, res) => {
+  const tmdbId = Number(req.params.tmdbId);
+
+  const { rows } = await pool.query(
+    `SELECT rating, review, watched, watchlist, updated_at
+     FROM ratings
+     WHERE user_id = $1 AND tmdb_id = $2`,
+    [req.user.id, tmdbId]
+  );
+
+  if (rows.length === 0) {
+    return res.json(null);
+  }
+
+  return res.json(rows[0]);
+});
+
 ratingsRouter.get("/movies/:tmdbId/summary", async (req, res) => {
   const tmdbId = Number(req.params.tmdbId);
 
