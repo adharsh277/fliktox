@@ -19,14 +19,38 @@ fliktox/
 
 ## Features Implemented
 
+### Core
 - Landing page with hero section and top 10 trending movie grid
 - User signup/login with JWT auth
-- Dashboard with friend activity feed and movie search
-- Movie details page with rating/review/watchlist/watched actions
-- Friend request and accept workflow endpoints
-- Private friend chat (REST + Socket.io events)
-- User profile page with ratings and pending friend requests
-- Discovery page for trending and searched movies
+- Dashboard with activity feed (own + friends) and movie search
+- Discovery page with trending, popular, top-rated, and browse
+
+### Movie Interaction
+- ✅ Rate movies (1-5 stars, upsert — update existing rating)
+- ✅ Write, edit, and delete reviews
+- ✅ Add / remove movies from watchlist (duplicate-safe via DB constraint)
+- ✅ Mark movies as watched
+- ✅ Average rating + rating distribution chart on movie page
+- ✅ Paginated reviews with page navigation
+- ✅ Pre-populated form with user's existing rating/review
+
+### Social
+- Friend request and accept workflow
+- Private friend chat (REST + Socket.io live events)
+- User profile page with ratings, diary, reviews, lists, watchlist, and stats tabs
+- Activity feed tracks: rated, reviewed, watchlist_add, watched
+
+### Personalization
+- ✅ Personalized recommendations (multi-seed similar movies + genre-based + friend picks)
+- ✅ Movie metadata (title, poster, year) in stats, feed, and recommendations
+- ✅ Rating analytics with full 5-star distribution
+- Movie lists (create, edit, delete, add/remove movies)
+- Dedicated watchlist page with poster grid
+
+### UX
+- ✅ Loading spinners on dashboard, discover, movie, stats pages
+- ✅ Quick action buttons (watchlist, watched) on movie page
+- Responsive design with Tailwind CSS
 
 ## Backend Setup
 
