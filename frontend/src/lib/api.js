@@ -76,6 +76,7 @@ export const api = {
     }),
   movieSummary: (id) => request(`/ratings/movies/${id}/summary`),
   movieReviews: (id) => request(`/ratings/movies/${id}/reviews`),
+  myMovieRating: (id) => request(`/ratings/movies/${id}/mine`),
   profileRatings: (userId) => request(`/ratings/users/${userId}`),
   addToWatchlist: (tmdbId) =>
     request(`/ratings/watchlist/${tmdbId}`, { method: "POST" }),
