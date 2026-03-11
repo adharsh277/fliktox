@@ -75,7 +75,15 @@ export const api = {
       body: JSON.stringify(payload)
     }),
   movieSummary: (id) => request(`/ratings/movies/${id}/summary`),
-  movieReviews: (id) => request(`/ratings/movies/${id}/reviews`),
+  movieReviews: (id, page = 1, limit = 10) =>
+    request(`/ratings/movies/${id}/reviews?page=${page}&limit=${limit}`),
+  editReview: (tmdbId, review) =>
+    request(`/ratings/reviews/${tmdbId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ review })
+    }),
+  deleteReview: (tmdbId) =>
+    request(`/ratings/reviews/${tmdbId}`, { method: "DELETE" }),
   myMovieRating: (id) => request(`/ratings/movies/${id}/mine`),
   profileRatings: (userId) => request(`/ratings/users/${userId}`),
   addToWatchlist: (tmdbId) =>
