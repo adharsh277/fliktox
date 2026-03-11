@@ -32,19 +32,28 @@ export default function StatsPage() {
     if (!user) { router.push("/login"); return; }
 
     api.myStats().then(setStats).catch(() => {});
-    api.recommendations().then(async (data) => {
+    api.recommendations().then((data) => {
       setRecs(data);
-      if (data.becauseYouLiked) {
-        try {
-          const movie = await api.movie(data.becauseYouLiked);
-          setSeedMovie(movie);
-        } catch { /* skip */ }
+      if (data.seedTitle) {
+        setSeedMovie({ title: data.seedTitle });
+      } else if (data.becauseYouLiked) {
+        api.movie(data.becauseYouLiked).then(setSeedMovie).catch(() => {});
       }
     }).catch(() => {});
   }, [router]);
 
   if (!stats) {
-    return <main><NavBar /><div className="flex min-h-[60vh] items-center justify-center"><p className="text-mist/60">Loading stats...</p></div></main>;
+    return (
+      <main>
+        <NavBar />
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="text-center">
+            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-gold border-t-transparent" />
+            <p className="mt-3 text-sm text-mist/60">Loading stats...</p>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   const distMax = Math.max(...(stats.ratingDistribution || []).map((d) => d.count), 1);
@@ -94,8 +103,16 @@ export default function StatsPage() {
             <div className="space-y-2">
               {stats.recentActivity.map((r, i) => (
                 <Link key={`${r.tmdb_id}-${i}`} href={`/movie/${r.tmdb_id}`}
-                  className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 transition hover:bg-white/10">
-                  <span className="text-sm text-mist">Movie #{r.tmdb_id}</span>
+                  className="flex items-center gap-3 rounded-lg bg-white/5 px-3 py-2 transition hover:bg-white/10">
+                  {r.poster_url ? (
+                    <img src={r.poster_url} alt={r.movie_title || ""} className="h-12 w-8 rounded object-cover" />
+                  ) : (
+                    <div className="flex h-12 w-8 items-center justify-center rounded bg-white/10 text-[8px] text-mist/30">?</div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-mist truncate">{r.movie_title || `Movie #${r.tmdb_id}`}</p>
+                    {r.release_year && <p className="text-xs text-mist/40">{r.release_year}</p>}
+                  </div>
                   <div className="flex items-center gap-2">
                     {r.watched && <span className="text-xs text-green-400">Watched</span>}
                     <span className="text-sm text-gold">{"★".repeat(r.rating || 0)}</span>
@@ -107,7 +124,7 @@ export default function StatsPage() {
         )}
 
         {/* Recommendations */}
-        {recs && (recs.similar?.length > 0 || recs.friendRecommendations?.length > 0) && (
+        {recs && (recs.similar?.length > 0 || recs.friendRecommendations?.length > 0 || recs.genreRecommendations?.length > 0) && (
           <div className="mt-10">
             <h2 className="font-display text-4xl tracking-wide text-gold">Recommended for You</h2>
 
@@ -131,14 +148,37 @@ export default function StatsPage() {
               </div>
             )}
 
+            {recs.genreRecommendations?.length > 0 && (
+              <div className="mt-6">
+                <p className="text-sm text-mist/60">Based on your favorite genres</p>
+                <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+                  {recs.genreRecommendations.slice(0, 10).map((m) => (
+                    <Link key={m.id} href={`/movie/${m.id}`} className="group overflow-hidden rounded-xl border border-white/10">
+                      {m.poster_url ? (
+                        <img src={m.poster_url} alt={m.title} className="aspect-[2/3] w-full object-cover transition group-hover:scale-105" />
+                      ) : (
+                        <div className="flex aspect-[2/3] items-center justify-center bg-[#172638] text-xs text-mist/40">{m.title}</div>
+                      )}
+                      <p className="px-2 py-1 text-xs text-mist/70 line-clamp-1">{m.title}</p>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {recs.friendRecommendations?.length > 0 && (
               <div className="mt-6">
                 <p className="text-sm text-mist/60">Highly rated by friends</p>
                 <div className="mt-3 space-y-2">
                   {recs.friendRecommendations.map((r, i) => (
                     <Link key={`${r.tmdb_id}-${i}`} href={`/movie/${r.tmdb_id}`}
-                      className="flex items-center justify-between rounded-lg bg-white/5 px-4 py-3 transition hover:bg-white/10">
-                      <span className="text-sm text-mist">Movie #{r.tmdb_id}</span>
+                      className="flex items-center gap-3 rounded-lg bg-white/5 px-4 py-3 transition hover:bg-white/10">
+                      {r.poster_url ? (
+                        <img src={r.poster_url} alt={r.movie_title || ""} className="h-12 w-8 rounded object-cover" />
+                      ) : (
+                        <div className="flex h-12 w-8 items-center justify-center rounded bg-white/10 text-[8px] text-mist/30">?</div>
+                      )}
+                      <span className="flex-1 text-sm text-mist truncate">{r.movie_title || `Movie #${r.tmdb_id}`}</span>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-mist/50">@{r.username}</span>
                         <span className="text-sm text-gold">{"★".repeat(r.rating)}</span>
