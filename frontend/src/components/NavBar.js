@@ -30,6 +30,7 @@ export default function NavBar() {
   const links = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/discover", label: "Discover" },
+    { href: "/watchlist", label: "Watchlist" },
     { href: "/lists", label: "Lists" },
     { href: "/stats", label: "Stats" }
   ];
