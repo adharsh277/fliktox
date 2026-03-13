@@ -46,7 +46,11 @@ ratingsRouter.post("/movies/:tmdbId", requireAuth, async (req, res) => {
   const io = getIO();
   if (io) {
     const { rows: friendRows } = await pool.query(
-      `SELECT friend_id FROM friends WHERE user_id = $1 AND status = 'accepted'`,
+      `
+      SELECT UNNEST(COALESCE(friends, '{}')) AS friend_id
+      FROM users
+      WHERE id = $1
+      `,
       [req.user.id]
     );
     const feedItem = {
