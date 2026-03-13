@@ -80,7 +80,7 @@ export default function NavBar() {
                   </div>
                   <div className="mt-1 space-y-0.5">
                     <Link
-                      href={`/user/${user.username}`}
+                      href={`/profile/${String(user.username || "").trim()}`}
                       onClick={() => setDropdownOpen(false)}
                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-mist hover:bg-white/5"
                     >
