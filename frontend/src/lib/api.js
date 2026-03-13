@@ -27,6 +27,7 @@ async function request(path, options = {}) {
 
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
+    cache: "no-store",
     headers
   });
 
@@ -100,12 +101,18 @@ export const api = {
   markWatched: (tmdbId) =>
     request(`/ratings/watched/${tmdbId}`, { method: "POST" }),
   feed: () => request("/feed/activity"),
-  friendList: () => request("/friends/list"),
+  friendList: () => request("/friends"),
   friendRequests: () => request("/friends/requests"),
   searchUsers: (q) => request(`/users/search?q=${encodeURIComponent(q)}`),
-  sendRequest: (friendId) => request(`/friends/request/${friendId}`, { method: "POST" }),
-  acceptRequest: (friendId) => request(`/friends/accept/${friendId}`, { method: "POST" }),
-  rejectRequest: (friendId) => request(`/friends/reject/${friendId}`, { method: "POST" }),
+  sendRequest: (receiverId) =>
+    request("/friends/request", {
+      method: "POST",
+      body: JSON.stringify({ receiverId })
+    }),
+  acceptRequest: (requestId) => request(`/friends/accept/${requestId}`, { method: "POST" }),
+  rejectRequest: (requestId) => request(`/friends/reject/${requestId}`, { method: "POST" }),
+  removeFriend: (friendId) => request(`/friends/${friendId}`, { method: "DELETE" }),
+  friendshipStatus: (userId) => request(`/friends/status/${userId}`),
   messages: (friendId) => request(`/messages/${friendId}`),
   sendMessage: (friendId, message) =>
     request(`/messages/${friendId}`, {
