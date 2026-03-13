@@ -7,6 +7,10 @@ import { requireAuth } from "../middleware/auth.js";
 
 export const authRouter = Router();
 
+function isValidUsername(value) {
+  return /^[a-zA-Z0-9_]{3,30}$/.test(value);
+}
+
 function createToken(user) {
   return jwt.sign(
     { id: user.id, username: user.username, email: user.email },
@@ -124,4 +128,62 @@ authRouter.put("/change-password", requireAuth, async (req, res) => {
   await pool.query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [newHash, req.user.id]);
 
   return res.json({ ok: true });
+});
+
+authRouter.put("/change-username", requireAuth, async (req, res) => {
+  const username = String(req.body?.username || "").trim();
+
+  if (!username) {
+    return res.status(400).json({ error: "New username is required" });
+  }
+
+  if (!isValidUsername(username)) {
+    return res.status(400).json({ error: "Username must be 3-30 characters and contain only letters, numbers, or underscores" });
+  }
+
+  try {
+    const taken = await pool.query(
+      `SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id != $2 LIMIT 1`,
+      [username, req.user.id]
+    );
+
+    if (taken.rows[0]) {
+      return res.status(409).json({ error: "Username already exists" });
+    }
+
+    const { rows } = await pool.query(
+      `
+      UPDATE users
+      SET username = $1
+      WHERE id = $2
+      RETURNING id, username, email, profile_photo, favorite_genres
+      `,
+      [username, req.user.id]
+    );
+
+    if (!rows[0]) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const user = rows[0];
+    const token = createToken(user);
+
+    return res.json({
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        profile_photo: user.profile_photo,
+        favorite_genres: user.favorite_genres
+      }
+    });
+  } catch (error) {
+    if (error.code === "23505") {
+      return res.status(409).json({ error: "Username already exists" });
+    }
+
+    console.error(error);
+    return res.status(500).json({ error: "Failed to update username" });
+  }
 });
