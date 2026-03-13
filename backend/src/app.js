@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
+import path from "path";
+import { fileURLToPath } from "url";
 import { env } from "./config/env.js";
 import { authRouter } from "./routes/auth.js";
 import { moviesRouter } from "./routes/movies.js";
@@ -17,6 +19,10 @@ import { profileRouter } from "./routes/profile.js";
 import { usersRouter } from "./routes/users.js";
 
 export const app = express();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadsDir = path.resolve(__dirname, "../uploads");
 
 const configuredOrigins = (env.clientOrigin || "")
   .split(",")
@@ -58,6 +64,7 @@ app.use(
 app.use(helmet());
 app.use(express.json({ limit: "1mb" }));
 app.use(morgan("dev"));
+app.use("/uploads", express.static(uploadsDir));
 
 app.use("/api/health", healthRouter);
 app.use("/api/auth", authRouter);
