@@ -127,7 +127,8 @@ usersRouter.get("/:username", async (req, res) => {
     return res.status(404).json({ error: "User not found" });
   }
 
-  const { rows } = await pool.query(
+  const [rowsRes, friendsRes] = await Promise.all([
+    pool.query(
     `SELECT
        COUNT(*) FILTER (WHERE watched = TRUE)::int AS watched,
        COUNT(*) FILTER (WHERE review IS NOT NULL AND review != '')::int AS reviews,
@@ -136,11 +137,18 @@ usersRouter.get("/:username", async (req, res) => {
      FROM ratings
      WHERE user_id = $1`,
     [user.id]
-  );
+    ),
+    pool.query(
+      `SELECT COALESCE(CARDINALITY(friends), 0)::int AS friends_count FROM users WHERE id = $1`,
+      [user.id]
+    )
+  ]);
 
-  const stats = rows[0] || {};
+  const stats = rowsRes.rows[0] || {};
+  const friendsCount = friendsRes.rows[0]?.friends_count || 0;
 
   return res.json({
+    id: user.id,
     username: user.username,
     profilePhoto: user.profile_photo,
     bio: user.bio || "",
@@ -149,6 +157,7 @@ usersRouter.get("/:username", async (req, res) => {
       watched: stats.watched || 0,
       reviews: stats.reviews || 0,
       watchlist: stats.watchlist || 0,
+      friends: friendsCount,
       avgRating: stats.avg_rating ? Number(stats.avg_rating) : 0
     }
   });
