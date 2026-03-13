@@ -18,7 +18,9 @@ feedRouter.get("/activity", async (req, res) => {
     WHERE (
       a.user_id = $1
       OR a.user_id IN (
-        SELECT friend_id FROM friends WHERE user_id = $1 AND status = 'accepted'
+        SELECT UNNEST(COALESCE(friends, '{}'))
+        FROM users
+        WHERE id = $1
       )
     )
     ORDER BY a.created_at DESC
