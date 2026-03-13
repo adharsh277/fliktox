@@ -9,7 +9,29 @@ import MoviePosterGrid from "../../components/MoviePosterGrid";
 import ChatPanel from "../../components/ChatPanel";
 import { api, getCurrentUser } from "../../lib/api";
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:4000";
+function resolveSocketUrl() {
+  if (process.env.NEXT_PUBLIC_SOCKET_URL) {
+    return process.env.NEXT_PUBLIC_SOCKET_URL;
+  }
+
+  if (process.env.NEXT_PUBLIC_API_BASE_URL?.startsWith("http")) {
+    return process.env.NEXT_PUBLIC_API_BASE_URL.replace(/\/api\/?$/, "");
+  }
+
+  if (typeof window !== "undefined") {
+    const { protocol, hostname } = window.location;
+
+    // Codespaces/GitHub preview forwards each port as its own host.
+    const previewMatch = hostname.match(/^(.*)-3000\.(app\.github\.dev|githubpreview\.dev)$/);
+    if (previewMatch) {
+      return `${protocol}//${previewMatch[1]}-4000.${previewMatch[2]}`;
+    }
+
+    return `${protocol}//${hostname}:4000`;
+  }
+
+  return "http://localhost:4000";
+}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -28,6 +50,19 @@ export default function DashboardPage() {
   const [friendRequests, setFriendRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  async function refreshDashboardData() {
+    const [feedRes, friendsRes, trendRes, requestsRes] = await Promise.all([
+      api.feed(),
+      api.friendList(),
+      api.trending(),
+      api.friendRequests()
+    ]);
+    setFeed(feedRes);
+    setFriends(friendsRes);
+    setTrending(trendRes);
+    setFriendRequests(Array.isArray(requestsRes) ? requestsRes : []);
+  }
+
   useEffect(() => {
     const user = getCurrentUser();
     if (!user) {
@@ -35,18 +70,18 @@ export default function DashboardPage() {
       return;
     }
 
-    Promise.all([api.feed(), api.friendList(), api.trending(), api.friendRequests()])
-      .then(([feedRes, friendsRes, trendRes, requestsRes]) => {
-        setFeed(feedRes);
-        setFriends(friendsRes);
-        setTrending(trendRes);
-        setFriendRequests(Array.isArray(requestsRes) ? requestsRes : []);
-      })
+    refreshDashboardData()
       .catch(() => {
         setFeed([]);
         setFriends([]);
       })
       .finally(() => setLoading(false));
+
+    const intervalId = setInterval(() => {
+      refreshDashboardData().catch(() => {});
+    }, 15000);
+
+    return () => clearInterval(intervalId);
   }, [router]);
 
   // Live feed updates via socket
@@ -54,7 +89,7 @@ export default function DashboardPage() {
     const token = localStorage.getItem("fliktox_token");
     if (!token) return undefined;
 
-    const socket = io(SOCKET_URL, {
+    const socket = io(resolveSocketUrl(), {
       auth: { token },
       reconnection: true,
       reconnectionDelay: 1000
@@ -63,6 +98,11 @@ export default function DashboardPage() {
 
     socket.on("feed:newRating", (item) => {
       setFeed((prev) => [item, ...prev]);
+    });
+
+    socket.on("connect_error", () => {
+      // Keep UI active even if socket transport fails in forwarded/dev environments.
+      refreshDashboardData().catch(() => {});
     });
 
     return () => {
@@ -106,19 +146,19 @@ export default function DashboardPage() {
     } catch {}
   }
 
-  async function onAccept(fromUserId) {
+  async function onAccept(requestId) {
     try {
-      await api.acceptRequest(fromUserId);
-      setFriendRequests((prev) => prev.filter((r) => r.from_user_id !== fromUserId));
+      await api.acceptRequest(requestId);
+      setFriendRequests((prev) => prev.filter((r) => r.id !== requestId));
       const updated = await api.friendList();
       setFriends(updated);
     } catch {}
   }
 
-  async function onReject(fromUserId) {
+  async function onReject(requestId) {
     try {
-      await api.rejectRequest(fromUserId);
-      setFriendRequests((prev) => prev.filter((r) => r.from_user_id !== fromUserId));
+      await api.rejectRequest(requestId);
+      setFriendRequests((prev) => prev.filter((r) => r.id !== requestId));
     } catch {}
   }
 
@@ -219,7 +259,7 @@ export default function DashboardPage() {
               <h2 className="text-lg font-semibold text-mist">Friend Requests</h2>
               <div className="mt-2 space-y-2">
                 {friendRequests.map((r) => (
-                  <div key={r.from_user_id} className="card-surface flex items-center justify-between rounded-xl px-4 py-3">
+                  <div key={r.id} className="card-surface flex items-center justify-between rounded-xl px-4 py-3">
                     <div className="flex items-center gap-3">
                       {r.profile_photo ? (
                         <img src={r.profile_photo} alt={r.username} className="h-8 w-8 rounded-full object-cover" />
@@ -233,14 +273,14 @@ export default function DashboardPage() {
                     <div className="flex gap-2">
                       <button
                         type="button"
-                        onClick={() => onAccept(r.from_user_id)}
+                        onClick={() => onAccept(r.id)}
                         className="rounded-lg bg-ember px-3 py-1 text-xs text-white"
                       >
                         Accept
                       </button>
                       <button
                         type="button"
-                        onClick={() => onReject(r.from_user_id)}
+                        onClick={() => onReject(r.id)}
                         className="rounded-lg border border-white/20 px-3 py-1 text-xs text-mist/70 hover:bg-white/5"
                       >
                         Reject
