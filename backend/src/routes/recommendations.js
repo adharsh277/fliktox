@@ -29,9 +29,10 @@ recommendationsRouter.get("/", async (req, res) => {
   const { rows: friendRecs } = await pool.query(
     `SELECT r.tmdb_id, r.rating, u.username
      FROM ratings r
-     JOIN friends f ON f.friend_id = r.user_id
+     JOIN users me ON me.id = $1
      JOIN users u ON u.id = r.user_id
-     WHERE f.user_id = $1 AND f.status = 'accepted' AND r.rating >= 4
+     WHERE r.user_id = ANY(COALESCE(me.friends, '{}'))
+       AND r.rating >= 4
        AND r.tmdb_id NOT IN (SELECT tmdb_id FROM ratings WHERE user_id = $1)
      ORDER BY r.rating DESC, r.updated_at DESC
      LIMIT 10`,

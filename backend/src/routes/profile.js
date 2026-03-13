@@ -39,7 +39,7 @@ profileRouter.get("/:username", async (req, res) => {
       [user.id]
     ),
     pool.query(
-      `SELECT COUNT(*)::int AS count FROM friends WHERE (user_id = $1 OR friend_id = $1) AND status = 'accepted'`,
+      `SELECT COALESCE(CARDINALITY(friends), 0)::int AS count FROM users WHERE id = $1`,
       [user.id]
     )
   ]);
