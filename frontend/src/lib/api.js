@@ -161,6 +161,8 @@ export const api = {
   },
 
   // Settings
+  changeUsername: (payload) =>
+    request("/auth/change-username", { method: "PUT", body: JSON.stringify(payload) }),
   changePassword: (payload) =>
     request("/auth/change-password", { method: "PUT", body: JSON.stringify(payload) })
 };

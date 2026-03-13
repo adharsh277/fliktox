@@ -21,6 +21,8 @@ function EyeIcon({ open }) {
 export default function SettingsPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const [username, setUsername] = useState("");
+  const [usernameMsg, setUsernameMsg] = useState("");
   const [bio, setBio] = useState("");
   const [profilePhoto, setProfilePhoto] = useState("");
   const [favoriteGenres, setFavoriteGenres] = useState("");
@@ -41,6 +43,7 @@ export default function SettingsPage() {
       return;
     }
     setUser(current);
+    setUsername(current.username || "");
     api.publicProfile(current.username).then((data) => {
       setBio(data.user.bio || "");
       setProfilePhoto(data.user.profilePhoto || "");
@@ -79,6 +82,27 @@ export default function SettingsPage() {
       setConfirmPassword("");
     } catch (err) {
       setPwMsg(err.message);
+    }
+  }
+
+  async function changeUsername(e) {
+    e.preventDefault();
+    setUsernameMsg("");
+
+    const nextUsername = String(username || "").trim();
+    if (!nextUsername) {
+      setUsernameMsg("Username is required");
+      return;
+    }
+
+    try {
+      const data = await api.changeUsername({ username: nextUsername });
+      setSession(data.token, data.user);
+      setUser(data.user);
+      setUsername(data.user.username || nextUsername);
+      setUsernameMsg("Username updated successfully!");
+    } catch (err) {
+      setUsernameMsg(err.message || "Failed to update username");
     }
   }
 
@@ -153,6 +177,25 @@ export default function SettingsPage() {
             </div>
             <button type="submit" className="w-full rounded-xl bg-ember px-4 py-3 text-white">Change Password</button>
             {pwMsg && <p className="text-sm text-gold">{pwMsg}</p>}
+          </div>
+        </form>
+
+        {/* Change Username */}
+        <form onSubmit={changeUsername} className="card-surface mt-6 rounded-2xl p-6">
+          <h2 className="text-lg font-semibold text-mist">Change Username</h2>
+          <p className="mt-1 text-xs text-mist/60">Use 3-30 characters: letters, numbers, and underscores only.</p>
+          <div className="mt-4 grid gap-4">
+            <div>
+              <label className="mb-1 block text-sm text-mist/60">New Username</label>
+              <input
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full rounded-xl border border-white/20 bg-[#102032] px-4 py-3 outline-none focus:border-ember"
+              />
+            </div>
+            <button type="submit" className="w-full rounded-xl bg-ember px-4 py-3 text-white">Update Username</button>
+            {usernameMsg && <p className="text-sm text-gold">{usernameMsg}</p>}
           </div>
         </form>
 
