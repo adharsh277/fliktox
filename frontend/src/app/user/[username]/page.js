@@ -64,8 +64,8 @@ export default function ProfilePage() {
     setEditBio(false);
   }
 
-  async function onAccept(id) {
-    await api.acceptRequest(id);
+  async function onAccept(requestId) {
+    await api.acceptRequest(requestId);
     const next = await api.friendRequests();
     setRequests(next);
   }
@@ -286,9 +286,9 @@ export default function ProfilePage() {
             <h2 className="mb-3 text-lg font-semibold text-mist">Friend Requests</h2>
             <div className="space-y-2">
               {requests.map((req) => (
-                <div key={req.from_user_id} className="flex items-center justify-between rounded-xl bg-white/5 p-3">
+                <div key={req.id} className="flex items-center justify-between rounded-xl bg-white/5 p-3">
                   <p className="text-sm text-mist">{req.username}</p>
-                  <button onClick={() => onAccept(req.from_user_id)} className="rounded-lg bg-ember px-3 py-1 text-sm text-white">Accept</button>
+                  <button onClick={() => onAccept(req.id)} className="rounded-lg bg-ember px-3 py-1 text-sm text-white">Accept</button>
                 </div>
               ))}
             </div>

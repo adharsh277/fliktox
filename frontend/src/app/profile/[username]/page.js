@@ -72,12 +72,32 @@ export default function PublicProfilePage() {
   const [watchlist, setWatchlist] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [friendshipStatus, setFriendshipStatus] = useState("none");
+  const [friendRequestId, setFriendRequestId] = useState(null);
+  const [friendActionLoading, setFriendActionLoading] = useState(false);
   const [bioInput, setBioInput] = useState("");
   const [selectedGenres, setSelectedGenres] = useState([]);
   const [avatarFile, setAvatarFile] = useState(null);
 
   const currentUser = useMemo(() => getCurrentUser(), []);
   const isOwnProfile = String(currentUser?.username || "").trim() === cleanUsername;
+
+  async function refreshFriendshipStatus(targetUserId) {
+    if (!targetUserId || isOwnProfile) {
+      setFriendshipStatus("self");
+      setFriendRequestId(null);
+      return;
+    }
+
+    try {
+      const status = await api.friendshipStatus(targetUserId);
+      setFriendshipStatus(status.status || "none");
+      setFriendRequestId(status.requestId || null);
+    } catch {
+      setFriendshipStatus("none");
+      setFriendRequestId(null);
+    }
+  }
 
   async function loadProfile() {
     setLoading(true);
@@ -98,10 +118,97 @@ export default function PublicProfilePage() {
       setWatchlist(watchlistRes);
       setBioInput(p.bio || "");
       setSelectedGenres(Array.isArray(p.favoriteGenres) ? p.favoriteGenres : []);
+      await refreshFriendshipStatus(p.id);
     } catch (err) {
       setMessage(err.message || "Failed to load profile");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function onSendFriendRequest() {
+    if (!profile?.id || friendActionLoading) {
+      return;
+    }
+
+    setFriendActionLoading(true);
+    setMessage("");
+    try {
+      await api.sendRequest(profile.id);
+      setFriendshipStatus("request_sent");
+      setMessage("Friend request sent");
+    } catch (err) {
+      setMessage(err.message || "Failed to send friend request");
+    } finally {
+      setFriendActionLoading(false);
+    }
+  }
+
+  async function onRemoveFriend() {
+    if (!profile?.id || friendActionLoading) {
+      return;
+    }
+
+    setFriendActionLoading(true);
+    setMessage("");
+    try {
+      await api.removeFriend(profile.id);
+      setFriendshipStatus("none");
+      setMessage("Friend removed");
+      setProfile((prev) => ({
+        ...prev,
+        stats: {
+          ...prev.stats,
+          friends: Math.max(0, Number(prev?.stats?.friends || 0) - 1)
+        }
+      }));
+    } catch (err) {
+      setMessage(err.message || "Failed to remove friend");
+    } finally {
+      setFriendActionLoading(false);
+    }
+  }
+
+  async function onAcceptIncomingRequest() {
+    if (!friendRequestId || friendActionLoading) {
+      return;
+    }
+
+    setFriendActionLoading(true);
+    setMessage("");
+    try {
+      await api.acceptRequest(friendRequestId);
+      setFriendshipStatus("friends");
+      setMessage("Friend request accepted");
+      setProfile((prev) => ({
+        ...prev,
+        stats: {
+          ...prev.stats,
+          friends: Number(prev?.stats?.friends || 0) + 1
+        }
+      }));
+    } catch (err) {
+      setMessage(err.message || "Failed to accept request");
+    } finally {
+      setFriendActionLoading(false);
+    }
+  }
+
+  async function onRejectIncomingRequest() {
+    if (!friendRequestId || friendActionLoading) {
+      return;
+    }
+
+    setFriendActionLoading(true);
+    setMessage("");
+    try {
+      await api.rejectRequest(friendRequestId);
+      setFriendshipStatus("none");
+      setMessage("Friend request rejected");
+    } catch (err) {
+      setMessage(err.message || "Failed to reject request");
+    } finally {
+      setFriendActionLoading(false);
     }
   }
 
@@ -222,7 +329,7 @@ export default function PublicProfilePage() {
 
             <div className="flex-1">
               <h1 className="font-display text-5xl text-gold">{profile.username}</h1>
-              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
                 <div className="rounded-xl bg-white/5 p-3 text-center">
                   <p className="font-display text-3xl text-gold">{profile.stats.watched}</p>
                   <p className="text-xs text-mist/60">Watched</p>
@@ -239,6 +346,10 @@ export default function PublicProfilePage() {
                   <p className="font-display text-3xl text-gold">{stars(profile.stats.avgRating)}</p>
                   <p className="text-xs text-mist/60">Avg Rating</p>
                 </div>
+                <div className="rounded-xl bg-white/5 p-3 text-center">
+                  <p className="font-display text-3xl text-gold">{profile.stats.friends || 0}</p>
+                  <p className="text-xs text-mist/60">Friends</p>
+                </div>
               </div>
 
               <div className="mt-4">
@@ -251,6 +362,58 @@ export default function PublicProfilePage() {
                   {profile.favoriteGenres?.length ? profile.favoriteGenres.join(" | ") : "No favorite genres selected yet."}
                 </p>
               </div>
+
+              {!isOwnProfile && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {friendshipStatus === "none" && (
+                    <button
+                      onClick={onSendFriendRequest}
+                      disabled={friendActionLoading}
+                      className="rounded-lg bg-ember px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      Add Friend
+                    </button>
+                  )}
+
+                  {friendshipStatus === "request_sent" && (
+                    <button
+                      disabled
+                      className="rounded-lg border border-white/20 px-4 py-2 text-sm text-mist/70"
+                    >
+                      Request Sent
+                    </button>
+                  )}
+
+                  {friendshipStatus === "friends" && (
+                    <button
+                      onClick={onRemoveFriend}
+                      disabled={friendActionLoading}
+                      className="rounded-lg border border-red-400/40 px-4 py-2 text-sm text-red-300 disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      Remove Friend
+                    </button>
+                  )}
+
+                  {friendshipStatus === "request_received" && (
+                    <>
+                      <button
+                        onClick={onAcceptIncomingRequest}
+                        disabled={friendActionLoading}
+                        className="rounded-lg bg-ember px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        Accept Request
+                      </button>
+                      <button
+                        onClick={onRejectIncomingRequest}
+                        disabled={friendActionLoading}
+                        className="rounded-lg border border-white/20 px-4 py-2 text-sm text-mist/70 disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        Reject
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
