@@ -360,7 +360,7 @@ export default function MoviePage() {
                             </div>
                           )}
                           <div>
-                            <Link href={`/user/${r.username}`} className="font-medium text-gold hover:underline">
+                            <Link href={`/profile/${String(r.username || "").trim()}`} className="font-medium text-gold hover:underline">
                               {r.username}
                             </Link>
                             <div className="flex items-center gap-2 text-sm">
