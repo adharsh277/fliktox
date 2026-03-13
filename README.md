@@ -36,6 +36,9 @@ fliktox/
 
 ### Social
 - Friend request and accept workflow
+- ✅ Dedicated friend requests page (`/friends/requests`)
+- ✅ Dedicated friends list page (`/friends`)
+- ✅ Profile-level friend actions (Add Friend, Request Sent, Remove Friend)
 - Private friend chat (REST + Socket.io live events)
 - User profile page with ratings, diary, reviews, lists, watchlist, and stats tabs
 - Activity feed tracks: rated, reviewed, watchlist_add, watched
@@ -51,6 +54,15 @@ fliktox/
 - ✅ Loading spinners on dashboard, discover, movie, stats pages
 - ✅ Quick action buttons (watchlist, watched) on movie page
 - Responsive design with Tailwind CSS
+
+## What We Modified Recently
+
+- Updated profile experience in `frontend/src/app/profile/[username]/page.js`
+- Added upload storage path in `backend/uploads/avatars/`
+- Added shared frontend API client in `frontend/src/lib/api.js`
+- Added movie details screen in `frontend/src/app/movie/[id]/page.js`
+- Added backend users route in `backend/src/routes/users.js`
+- Added backend app bootstrap in `backend/src/app.js`
 
 ## Backend Setup
 
