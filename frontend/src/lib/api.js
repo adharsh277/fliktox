@@ -1,5 +1,9 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "/api";
 
+function normalizeUsername(username) {
+  return encodeURIComponent(String(username || "").trim());
+}
+
 function getToken() {
   if (typeof window === "undefined") {
     return "";
@@ -10,10 +14,12 @@ function getToken() {
 
 async function request(path, options = {}) {
   const token = getToken();
-  const headers = {
-    "Content-Type": "application/json",
-    ...(options.headers || {})
-  };
+  const headers = { ...(options.headers || {}) };
+
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  if (!isFormData && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
 
   if (token) {
     headers.Authorization = `Bearer ${token}`;
@@ -129,9 +135,23 @@ export const api = {
   recommendations: () => request("/recommendations"),
 
   // Profile
-  publicProfile: (username) => request(`/profile/${username}`),
+  publicProfile: (username) => request(`/profile/${normalizeUsername(username)}`),
   updateProfile: (payload) =>
     request("/profile/me/update", { method: "PUT", body: JSON.stringify(payload) }),
+
+  // Users profile endpoints
+  userProfile: (username) => request(`/users/${normalizeUsername(username)}`),
+  userWatched: (username) => request(`/users/${normalizeUsername(username)}/watched`),
+  userReviews: (username) => request(`/users/${normalizeUsername(username)}/reviews`),
+  userRatings: (username) => request(`/users/${normalizeUsername(username)}/ratings`),
+  userWatchlist: (username) => request(`/users/${normalizeUsername(username)}/watchlist`),
+  updateFavorites: (genres) =>
+    request("/users/favorites", { method: "PUT", body: JSON.stringify({ genres }) }),
+  uploadAvatar: (file) => {
+    const body = new FormData();
+    body.append("avatar", file);
+    return request("/users/avatar", { method: "POST", body });
+  },
 
   // Settings
   changePassword: (payload) =>
