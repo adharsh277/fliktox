@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import NavBar from "../../../components/NavBar";
 import { api, getCurrentUser } from "../../../lib/api";
+import { getSocket } from "../../../lib/socket";
 
 function toAvatar(url) {
   if (!url) return "";
@@ -20,6 +21,11 @@ export default function FriendRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  async function loadRequests() {
+    const rows = await api.friendRequests();
+    setRequests(Array.isArray(rows) ? rows : []);
+  }
+
   useEffect(() => {
     const current = getCurrentUser();
     if (!current) {
@@ -27,11 +33,27 @@ export default function FriendRequestsPage() {
       return;
     }
 
-    api.friendRequests()
-      .then((rows) => setRequests(Array.isArray(rows) ? rows : []))
+    loadRequests()
       .catch((err) => setError(err.message || "Failed to load requests"))
       .finally(() => setLoading(false));
   }, [router]);
+
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) {
+      return undefined;
+    }
+
+    function onFriendRequest() {
+      loadRequests().catch(() => {});
+    }
+
+    socket.on("friend:request", onFriendRequest);
+
+    return () => {
+      socket.off("friend:request", onFriendRequest);
+    };
+  }, []);
 
   async function onAccept(requestId) {
     try {

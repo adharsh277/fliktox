@@ -3,18 +3,114 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { clearSession, getCurrentUser } from "../lib/api";
+import { api, clearSession, getCurrentUser } from "../lib/api";
+import { getSocket } from "../lib/socket";
 
 export default function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [requestCount, setRequestCount] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  const [toast, setToast] = useState(null);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
     setUser(getCurrentUser());
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function refreshBadges() {
+      try {
+        const [requests, unread] = await Promise.all([api.friendRequests(), api.unreadMessages()]);
+        if (!mounted) {
+          return;
+        }
+
+        setRequestCount(Array.isArray(requests) ? requests.length : 0);
+        setUnreadMessages(Number(unread?.total || 0));
+      } catch {
+        if (!mounted) {
+          return;
+        }
+        setRequestCount(0);
+        setUnreadMessages(0);
+      }
+    }
+
+    if (user) {
+      refreshBadges();
+      const interval = setInterval(refreshBadges, 20000);
+      return () => {
+        mounted = false;
+        clearInterval(interval);
+      };
+    }
+
+    return () => {
+      mounted = false;
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      return undefined;
+    }
+
+    const socket = getSocket();
+    if (!socket) {
+      return undefined;
+    }
+
+    function onFriendRequest(data) {
+      setRequestCount((prev) => prev + 1);
+      setToast({
+        title: "New Friend Request",
+        message: `${data.username} sent you a request`
+      });
+    }
+
+    function onPrivateMessage(data) {
+      if (data.sender_id !== user.id) {
+        setUnreadMessages((prev) => prev + 1);
+        setToast({
+          title: "New Message",
+          message: data.message_type === "movie" ? "A friend shared a movie" : "You received a new message"
+        });
+      }
+    }
+
+    function onSeen() {
+      api.unreadMessages()
+        .then((unread) => setUnreadMessages(Number(unread?.total || 0)))
+        .catch(() => {});
+    }
+
+    socket.on("friend:request", onFriendRequest);
+    socket.on("private:message", onPrivateMessage);
+    socket.on("message:seen", onSeen);
+
+    return () => {
+      socket.off("friend:request", onFriendRequest);
+      socket.off("private:message", onPrivateMessage);
+      socket.off("message:seen", onSeen);
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!toast) {
+      return undefined;
+    }
+
+    const timer = setTimeout(() => {
+      setToast(null);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -28,8 +124,8 @@ export default function NavBar() {
   }, []);
 
   const links = [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/friends", label: "Friends" },
+    { href: "/dashboard", label: "Dashboard", badge: unreadMessages > 0 ? unreadMessages : 0 },
+    { href: "/friends", label: "Friends", badge: requestCount > 0 ? requestCount : 0 },
     { href: "/discover", label: "Discover" },
     { href: "/watchlist", label: "Watchlist" },
     { href: "/lists", label: "Lists" },
@@ -47,9 +143,14 @@ export default function NavBar() {
             <Link
               key={link.href}
               href={link.href}
-              className={pathname === link.href ? "text-gold" : "text-mist/80 hover:text-mist"}
+              className={`${pathname === link.href ? "text-gold" : "text-mist/80 hover:text-mist"} relative flex items-center gap-1`}
             >
               {link.label}
+              {link.badge > 0 && (
+                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-ember px-1 text-[10px] font-bold leading-none text-white">
+                  {link.badge}
+                </span>
+              )}
             </Link>
           ))}
 
@@ -115,6 +216,12 @@ export default function NavBar() {
           )}
         </nav>
       </div>
+      {toast && (
+        <div className="pointer-events-none fixed right-4 top-20 z-40 w-[280px] rounded-xl border border-white/10 bg-[#0d1b2a] p-3 shadow-xl">
+          <p className="text-xs uppercase tracking-wide text-gold">{toast.title}</p>
+          <p className="mt-1 text-sm text-mist">{toast.message}</p>
+        </div>
+      )}
     </header>
   );
 }

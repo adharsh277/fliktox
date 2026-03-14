@@ -45,9 +45,14 @@ export default function FriendsPage() {
       <section className="mx-auto w-full max-w-5xl px-4 py-8 md:px-6">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="font-display text-5xl text-gold">Friends</h1>
-          <Link href="/friends/requests" className="rounded-lg border border-white/20 px-4 py-2 text-sm text-mist/80 hover:bg-white/5">
-            View Requests
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/friends/suggestions" className="rounded-lg border border-white/20 px-4 py-2 text-sm text-mist/80 hover:bg-white/5">
+              Suggestions
+            </Link>
+            <Link href="/friends/requests" className="rounded-lg border border-white/20 px-4 py-2 text-sm text-mist/80 hover:bg-white/5">
+              View Requests
+            </Link>
+          </div>
         </div>
 
         {loading ? (

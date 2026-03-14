@@ -101,8 +101,11 @@ export const api = {
   markWatched: (tmdbId) =>
     request(`/ratings/watched/${tmdbId}`, { method: "POST" }),
   feed: () => request("/feed/activity"),
+  friendsFeed: () => request("/feed/friends"),
   friendList: () => request("/friends"),
   friendRequests: () => request("/friends/requests"),
+  friendSuggestions: (limit = 20) => request(`/friends/suggestions?limit=${limit}`),
+  mutualFriends: (userId) => request(`/friends/mutual/${userId}`),
   searchUsers: (q) => request(`/users/search?q=${encodeURIComponent(q)}`),
   sendRequest: (receiverId) =>
     request("/friends/request", {
@@ -113,11 +116,30 @@ export const api = {
   rejectRequest: (requestId) => request(`/friends/reject/${requestId}`, { method: "POST" }),
   removeFriend: (friendId) => request(`/friends/${friendId}`, { method: "DELETE" }),
   friendshipStatus: (userId) => request(`/friends/status/${userId}`),
-  messages: (friendId) => request(`/messages/${friendId}`),
-  sendMessage: (friendId, message) =>
+  messages: (friendId, cursor = null, limit = 30) => {
+    const query = new URLSearchParams();
+    query.set("limit", String(limit));
+    if (cursor) {
+      query.set("cursor", cursor);
+    }
+    return request(`/messages/${friendId}?${query.toString()}`);
+  },
+  unreadMessages: () => request("/messages/unread"),
+  seenMessages: (friendId) =>
+    request("/messages/seen", {
+      method: "POST",
+      body: JSON.stringify({ friendId })
+    }),
+  reactMessage: (messageId, reaction) =>
+    request(`/messages/${messageId}/reactions`, {
+      method: "POST",
+      body: JSON.stringify({ reaction })
+    }),
+  removeReaction: (messageId) => request(`/messages/${messageId}/reactions`, { method: "DELETE" }),
+  sendMessage: (friendId, message, extra = {}) =>
     request(`/messages/${friendId}`, {
       method: "POST",
-      body: JSON.stringify({ message })
+      body: JSON.stringify({ message, ...extra })
     }),
 
   // Lists
