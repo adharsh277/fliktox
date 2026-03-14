@@ -55,10 +55,14 @@ ratingsRouter.post("/movies/:tmdbId", requireAuth, async (req, res) => {
     );
     const feedItem = {
       username: req.user.username,
+      action: "rated",
       tmdb_id: tmdbId,
-      rating,
-      review: review || null,
-      updated_at: ratingRow.updated_at
+      metadata: {
+        rating,
+        review: review || null,
+        movie_title: movie_title || null
+      },
+      created_at: ratingRow.updated_at
     };
     for (const f of friendRows) {
       io.to(`user:${f.friend_id}`).emit("feed:newRating", feedItem);
