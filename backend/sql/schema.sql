@@ -61,6 +61,23 @@ CREATE TABLE IF NOT EXISTS messages (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS seen BOOLEAN DEFAULT FALSE;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS seen_at TIMESTAMP;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS message_type VARCHAR(20) NOT NULL DEFAULT 'text';
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS movie_id INTEGER;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS movie_title TEXT;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS movie_poster TEXT;
+
+CREATE TABLE IF NOT EXISTS message_reactions (
+  id SERIAL PRIMARY KEY,
+  message_id INTEGER REFERENCES messages(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  reaction VARCHAR(16) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE (message_id, user_id)
+);
+
 ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT DEFAULT '';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS friends INTEGER[] DEFAULT '{}';
 
@@ -98,6 +115,8 @@ CREATE INDEX IF NOT EXISTS idx_friends_user_id ON friends(user_id);
 CREATE INDEX IF NOT EXISTS idx_friend_requests_receiver_status ON friend_requests(receiver_id, status);
 CREATE INDEX IF NOT EXISTS idx_friend_requests_sender_status ON friend_requests(sender_id, status);
 CREATE INDEX IF NOT EXISTS idx_messages_pair ON messages(sender_id, receiver_id);
+CREATE INDEX IF NOT EXISTS idx_messages_receiver_seen ON messages(receiver_id, seen);
+CREATE INDEX IF NOT EXISTS idx_message_reactions_message_id ON message_reactions(message_id);
 CREATE INDEX IF NOT EXISTS idx_lists_user_id ON lists(user_id);
 CREATE INDEX IF NOT EXISTS idx_list_movies_list_id ON list_movies(list_id);
 CREATE INDEX IF NOT EXISTS idx_activity_feed_user_id ON activity_feed(user_id);
