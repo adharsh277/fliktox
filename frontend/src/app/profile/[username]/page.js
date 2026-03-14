@@ -75,6 +75,7 @@ export default function PublicProfilePage() {
   const [friendshipStatus, setFriendshipStatus] = useState("none");
   const [friendRequestId, setFriendRequestId] = useState(null);
   const [friendActionLoading, setFriendActionLoading] = useState(false);
+  const [mutualFriends, setMutualFriends] = useState([]);
   const [bioInput, setBioInput] = useState("");
   const [selectedGenres, setSelectedGenres] = useState([]);
   const [avatarFile, setAvatarFile] = useState(null);
@@ -119,8 +120,16 @@ export default function PublicProfilePage() {
       setBioInput(p.bio || "");
       setSelectedGenres(Array.isArray(p.favoriteGenres) ? p.favoriteGenres : []);
       await refreshFriendshipStatus(p.id);
+
+      if (currentUser?.id && currentUser.id !== p.id) {
+        const mutual = await api.mutualFriends(p.id);
+        setMutualFriends(Array.isArray(mutual?.users) ? mutual.users : []);
+      } else {
+        setMutualFriends([]);
+      }
     } catch (err) {
       setMessage(err.message || "Failed to load profile");
+      setMutualFriends([]);
     } finally {
       setLoading(false);
     }
@@ -411,6 +420,17 @@ export default function PublicProfilePage() {
                         Reject
                       </button>
                     </>
+                  )}
+                </div>
+              )}
+
+              {!isOwnProfile && (
+                <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3">
+                  <p className="text-sm text-mist/80">Mutual Friends: {mutualFriends.length}</p>
+                  {mutualFriends.length > 0 && (
+                    <p className="mt-1 text-xs text-mist/60">
+                      {mutualFriends.slice(0, 6).map((friend) => friend.username).join(" | ")}
+                    </p>
                   )}
                 </div>
               )}
