@@ -2,36 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { io } from "socket.io-client";
 import NavBar from "../../components/NavBar";
 import ActivityFeed from "../../components/ActivityFeed";
 import MoviePosterGrid from "../../components/MoviePosterGrid";
 import ChatPanel from "../../components/ChatPanel";
 import { api, getCurrentUser } from "../../lib/api";
-
-function resolveSocketUrl() {
-  if (process.env.NEXT_PUBLIC_SOCKET_URL) {
-    return process.env.NEXT_PUBLIC_SOCKET_URL;
-  }
-
-  if (process.env.NEXT_PUBLIC_API_BASE_URL?.startsWith("http")) {
-    return process.env.NEXT_PUBLIC_API_BASE_URL.replace(/\/api\/?$/, "");
-  }
-
-  if (typeof window !== "undefined") {
-    const { protocol, hostname } = window.location;
-
-    // Codespaces/GitHub preview forwards each port as its own host.
-    const previewMatch = hostname.match(/^(.*)-3000\.(app\.github\.dev|githubpreview\.dev)$/);
-    if (previewMatch) {
-      return `${protocol}//${previewMatch[1]}-4000.${previewMatch[2]}`;
-    }
-
-    return `${protocol}//${hostname}:4000`;
-  }
-
-  return "http://localhost:4000";
-}
+import { getSocket } from "../../lib/socket";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -52,7 +28,7 @@ export default function DashboardPage() {
 
   async function refreshDashboardData() {
     const [feedRes, friendsRes, trendRes, requestsRes] = await Promise.all([
-      api.feed(),
+      api.friendsFeed(),
       api.friendList(),
       api.trending(),
       api.friendRequests()
@@ -86,14 +62,8 @@ export default function DashboardPage() {
 
   // Live feed updates via socket
   useEffect(() => {
-    const token = localStorage.getItem("fliktox_token");
-    if (!token) return undefined;
-
-    const socket = io(resolveSocketUrl(), {
-      auth: { token },
-      reconnection: true,
-      reconnectionDelay: 1000
-    });
+    const socket = getSocket();
+    if (!socket) return undefined;
     socketRef.current = socket;
 
     socket.on("feed:newRating", (item) => {
@@ -106,7 +76,8 @@ export default function DashboardPage() {
     });
 
     return () => {
-      socket.disconnect();
+      socket.off("feed:newRating");
+      socket.off("connect_error");
       socketRef.current = null;
     };
   }, []);
@@ -178,7 +149,7 @@ export default function DashboardPage() {
           <h1 className="font-display text-5xl tracking-wide text-gold">Home Dashboard</h1>
           <p className="mt-1 text-sm text-mist/75">Friends activity, movie search, and live chat.</p>
 
-          <h2 className="mt-6 text-lg font-semibold text-mist">Activity Feed</h2>
+          <h2 className="mt-6 text-lg font-semibold text-mist">Friends Activity</h2>
           <div className="mt-3">
             <ActivityFeed items={feed} />
           </div>
