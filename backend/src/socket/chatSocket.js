@@ -54,10 +54,21 @@ export function registerChatSocket(httpServer) {
   io.on("connection", (socket) => {
     const userId = socket.data.user.id;
     socket.join(`user:${userId}`);
+    socket.join(String(userId));
+
+    socket.on("register", (registeredUserId) => {
+      if (Number(registeredUserId) !== userId) {
+        return;
+      }
+
+      socket.join(`user:${userId}`);
+      socket.join(String(userId));
+    });
 
     // Mark online and broadcast
     onlineUsers.add(userId);
     socket.broadcast.emit("user:online", { userId });
+    socket.broadcast.emit("online", { userId });
 
     // Send the full online list to the new connection
     socket.emit("online:list", [...onlineUsers]);
@@ -66,6 +77,7 @@ export function registerChatSocket(httpServer) {
     socket.on("typing", ({ receiverId }) => {
       if (receiverId) {
         io.to(`user:${receiverId}`).emit("user:typing", { userId });
+        io.to(`user:${receiverId}`).emit("typing", { userId });
       }
     });
 
@@ -75,6 +87,7 @@ export function registerChatSocket(httpServer) {
       if (!rooms || rooms.size === 0) {
         onlineUsers.delete(userId);
         socket.broadcast.emit("user:offline", { userId });
+        socket.broadcast.emit("offline", { userId });
       }
     });
   });
