@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { pool } from "../db/pool.js";
 import { requireAuth } from "../middleware/auth.js";
+import { getIO } from "../socket/chatSocket.js";
 
 export const friendsRouter = Router();
 
@@ -65,6 +66,25 @@ async function sendFriendRequest(senderId, receiverId) {
     `,
     [senderId, receiverId]
   );
+
+  const senderProfile = await pool.query(
+    `SELECT id, username, profile_photo FROM users WHERE id = $1`,
+    [senderId]
+  );
+
+  const sender = senderProfile.rows[0];
+  const io = getIO();
+  if (io && sender) {
+    const payload = {
+      senderId,
+      username: sender.username,
+      avatar: sender.profile_photo || null
+    };
+
+    // Emit to both room styles for backward compatibility.
+    io.to(`user:${receiverId}`).emit("friend:request", payload);
+    io.to(String(receiverId)).emit("friend:request", payload);
+  }
 
   return { status: 201, data: created.rows[0] };
 }
@@ -492,4 +512,75 @@ friendsRouter.get("/status/:userId", async (req, res) => {
   }
 
   return res.json({ status: "none" });
+});
+
+friendsRouter.get("/mutual/:userId", async (req, res) => {
+  const currentUserId = req.user.id;
+  const targetUserId = Number(req.params.userId);
+
+  if (!targetUserId || targetUserId === currentUserId) {
+    return res.json({ count: 0, users: [] });
+  }
+
+  const { rows } = await pool.query(
+    `
+    SELECT u.id, u.username, u.profile_photo
+    FROM users me
+    JOIN users target ON target.id = $2
+    JOIN users u ON u.id = ANY(COALESCE(me.friends, '{}'))
+    WHERE me.id = $1
+      AND u.id = ANY(COALESCE(target.friends, '{}'))
+    ORDER BY u.username ASC
+    `,
+    [currentUserId, targetUserId]
+  );
+
+  return res.json({
+    count: rows.length,
+    users: rows
+  });
+});
+
+friendsRouter.get("/suggestions", async (req, res) => {
+  const currentUserId = req.user.id;
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+
+  const { rows } = await pool.query(
+    `
+    WITH my_friends AS (
+      SELECT UNNEST(COALESCE(friends, '{}')) AS friend_id
+      FROM users
+      WHERE id = $1
+    ),
+    candidates AS (
+      SELECT UNNEST(COALESCE(u.friends, '{}')) AS candidate_id, mf.friend_id AS via_friend_id
+      FROM users u
+      JOIN my_friends mf ON mf.friend_id = u.id
+    )
+    SELECT c.candidate_id AS id,
+           usr.username,
+           usr.profile_photo,
+           COUNT(*)::int AS mutual_count
+    FROM candidates c
+    JOIN users usr ON usr.id = c.candidate_id
+    WHERE c.candidate_id <> $1
+      AND c.candidate_id <> ALL(COALESCE((SELECT friends FROM users WHERE id = $1), '{}'))
+      AND NOT EXISTS (
+        SELECT 1
+        FROM friend_requests fr
+        WHERE fr.status = 'pending'
+          AND (
+            (fr.sender_id = $1 AND fr.receiver_id = c.candidate_id)
+            OR
+            (fr.sender_id = c.candidate_id AND fr.receiver_id = $1)
+          )
+      )
+    GROUP BY c.candidate_id, usr.username, usr.profile_photo
+    ORDER BY mutual_count DESC, usr.username ASC
+    LIMIT $2
+    `,
+    [currentUserId, limit]
+  );
+
+  return res.json(rows);
 });
