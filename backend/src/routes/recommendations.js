@@ -7,6 +7,27 @@ export const recommendationsRouter = Router();
 recommendationsRouter.use(requireAuth);
 
 const TMDB_IMAGE = "https://image.tmdb.org/t/p/w500";
+const GENRE_TO_ID = {
+  Action: 28,
+  Adventure: 12,
+  Animation: 16,
+  Comedy: 35,
+  Crime: 80,
+  Documentary: 99,
+  Drama: 18,
+  Family: 10751,
+  Fantasy: 14,
+  History: 36,
+  Horror: 27,
+  Music: 10402,
+  Mystery: 9648,
+  Romance: 10749,
+  "Sci-Fi": 878,
+  "Science Fiction": 878,
+  Thriller: 53,
+  War: 10752,
+  Western: 37
+};
 
 function withPoster(movie) {
   return {
@@ -18,6 +39,12 @@ function withPoster(movie) {
 // Get personalized recommendations
 recommendationsRouter.get("/", async (req, res) => {
   const userId = req.user.id;
+
+  const { rows: userRows } = await pool.query(
+    `SELECT favorite_genres FROM users WHERE id = $1`,
+    [userId]
+  );
+  const favoriteGenres = userRows[0]?.favorite_genres || [];
 
   // Get user's top-rated movies (4+ stars) — use multiple seeds
   const { rows: topRated } = await pool.query(
@@ -39,6 +66,28 @@ recommendationsRouter.get("/", async (req, res) => {
     [userId]
   );
 
+  // Get movies watched by friends that user has not watched/rated yet
+  const { rows: friendsWatched } = await pool.query(
+    `
+    SELECT r.tmdb_id,
+           COUNT(DISTINCT r.user_id)::int AS watched_by_friends,
+           ROUND(AVG(r.rating)::numeric, 2) AS avg_friend_rating,
+           ARRAY_AGG(DISTINCT u.username) AS usernames
+    FROM ratings r
+    JOIN users me ON me.id = $1
+    JOIN users u ON u.id = r.user_id
+    WHERE r.user_id = ANY(COALESCE(me.friends, '{}'))
+      AND r.watched = TRUE
+      AND r.tmdb_id NOT IN (
+        SELECT tmdb_id FROM ratings WHERE user_id = $1 AND watched = TRUE
+      )
+    GROUP BY r.tmdb_id
+    ORDER BY watched_by_friends DESC, avg_friend_rating DESC NULLS LAST
+    LIMIT 12
+    `,
+    [userId]
+  );
+
   // Enrich friend recs with movie metadata
   const enrichedFriendRecs = await Promise.all(
     friendRecs.map(async (r) => {
@@ -51,6 +100,21 @@ recommendationsRouter.get("/", async (req, res) => {
         };
       } catch {
         return r;
+      }
+    })
+  );
+
+  const enrichedFriendsWatched = await Promise.all(
+    friendsWatched.map(async (row) => {
+      try {
+        const movie = await getMovieDetails(row.tmdb_id);
+        return {
+          ...row,
+          movie_title: movie?.title || null,
+          poster_url: movie?.poster_url || null
+        };
+      } catch {
+        return row;
       }
     })
   );
@@ -86,9 +150,17 @@ recommendationsRouter.get("/", async (req, res) => {
 
   // Genre-based recommendations: find user's top genres from their rated movies
   let genreRecommendations = [];
-  if (topRated.length > 0) {
+  if (topRated.length > 0 || favoriteGenres.length > 0) {
     // Get genre IDs from top-rated movies
     const genreCounts = {};
+
+    for (const name of favoriteGenres) {
+      const id = GENRE_TO_ID[String(name || "").trim()];
+      if (id) {
+        genreCounts[id] = (genreCounts[id] || 0) + 3;
+      }
+    }
+
     for (const seed of seeds) {
       try {
         const movie = await getMovieDetails(seed.tmdb_id);
@@ -137,6 +209,7 @@ recommendationsRouter.get("/", async (req, res) => {
     seedTitle,
     similar: similarMovies,
     genreRecommendations,
-    friendRecommendations: enrichedFriendRecs
+    friendRecommendations: enrichedFriendRecs,
+    friendsWatchedRecommendations: enrichedFriendsWatched
   });
 });
