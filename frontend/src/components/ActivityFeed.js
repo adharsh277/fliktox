@@ -1,9 +1,6 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-
-const INITIAL_COUNT = 4;
 
 function actionLabel(item) {
   const action = item.action || "rated";
@@ -44,8 +41,7 @@ function actionLabel(item) {
   );
 }
 
-export default function ActivityFeed({ items = [] }) {
-  const [expanded, setExpanded] = useState(false);
+export default function ActivityFeed({ items = [], hasMore = false, loadingMore = false, onLoadMore }) {
 
   if (!items.length) {
     return (
@@ -55,11 +51,9 @@ export default function ActivityFeed({ items = [] }) {
     );
   }
 
-  const visible = expanded ? items : items.slice(0, INITIAL_COUNT);
-
   return (
     <div className="space-y-3">
-      {visible.map((item, idx) => (
+      {items.map((item, idx) => (
         <div key={`${item.username}-${item.tmdb_id}-${idx}`} className="card-surface rounded-2xl p-4">
           <p className="text-sm text-mist">
             <span className="font-semibold text-gold">{item.username}</span>{" "}
@@ -77,13 +71,14 @@ export default function ActivityFeed({ items = [] }) {
           )}
         </div>
       ))}
-      {items.length > INITIAL_COUNT && (
+      {hasMore && (
         <button
           type="button"
-          onClick={() => setExpanded(!expanded)}
+          onClick={onLoadMore}
+          disabled={loadingMore}
           className="w-full rounded-xl border border-white/10 px-4 py-2 text-sm text-mist/70 hover:bg-white/5"
         >
-          {expanded ? "Show less" : `Show all (${items.length})`}
+          {loadingMore ? "Loading..." : "Load more activity"}
         </button>
       )}
     </div>
