@@ -5,6 +5,47 @@ import { getIO } from "../socket/chatSocket.js";
 
 export const ratingsRouter = Router();
 
+async function getFriendIds(userId) {
+  const { rows } = await pool.query(
+    `
+    SELECT UNNEST(COALESCE(friends, '{}')) AS friend_id
+    FROM users
+    WHERE id = $1
+    `,
+    [userId]
+  );
+
+  return rows.map((row) => row.friend_id);
+}
+
+async function emitActivityToFriends(user, activity) {
+  const io = getIO();
+  if (!io || !user?.id) {
+    return;
+  }
+
+  const friendIds = await getFriendIds(user.id);
+  if (!friendIds.length) {
+    return;
+  }
+
+  const feedItem = {
+    user_id: user.id,
+    username: user.username,
+    action: activity.action,
+    tmdb_id: activity.tmdbId,
+    metadata: activity.metadata || {},
+    created_at: activity.createdAt || new Date().toISOString()
+  };
+
+  for (const friendId of friendIds) {
+    io.to(`user:${friendId}`).emit("feed:newActivity", feedItem);
+    if (activity.action === "rated") {
+      io.to(`user:${friendId}`).emit("feed:newRating", feedItem);
+    }
+  }
+}
+
 ratingsRouter.post("/movies/:tmdbId", requireAuth, async (req, res) => {
   const tmdbId = Number(req.params.tmdbId);
   const { rating, review, watched = false, watchlist = false, movie_title } = req.body;
@@ -42,31 +83,28 @@ ratingsRouter.post("/movies/:tmdbId", requireAuth, async (req, res) => {
     );
   }
 
-  // Emit live feed event to all friends
-  const io = getIO();
-  if (io) {
-    const { rows: friendRows } = await pool.query(
-      `
-      SELECT UNNEST(COALESCE(friends, '{}')) AS friend_id
-      FROM users
-      WHERE id = $1
-      `,
-      [req.user.id]
-    );
-    const feedItem = {
-      username: req.user.username,
-      action: "rated",
-      tmdb_id: tmdbId,
+  await emitActivityToFriends(req.user, {
+    action: "rated",
+    tmdbId,
+    metadata: {
+      rating,
+      review: review || null,
+      movie_title: movie_title || null
+    },
+    createdAt: ratingRow.updated_at
+  });
+
+  if (review) {
+    await emitActivityToFriends(req.user, {
+      action: "reviewed",
+      tmdbId,
       metadata: {
         rating,
-        review: review || null,
+        review,
         movie_title: movie_title || null
       },
-      created_at: ratingRow.updated_at
-    };
-    for (const f of friendRows) {
-      io.to(`user:${f.friend_id}`).emit("feed:newRating", feedItem);
-    }
+      createdAt: ratingRow.updated_at
+    });
   }
 
   return res.json(ratingRow);
@@ -93,6 +131,15 @@ ratingsRouter.post("/watchlist/:tmdbId", requireAuth, async (req, res) => {
     `INSERT INTO activity_feed (user_id, action, tmdb_id, metadata) VALUES ($1, 'watchlist_add', $2, $3)`,
     [req.user.id, tmdbId, JSON.stringify({ movie_title: movie_title || null })]
   );
+
+  await emitActivityToFriends(req.user, {
+    action: "watchlist_add",
+    tmdbId,
+    metadata: {
+      movie_title: movie_title || null
+    },
+    createdAt: rows[0]?.updated_at
+  });
 
   return res.json(rows[0]);
 });
@@ -141,6 +188,15 @@ ratingsRouter.post("/watched/:tmdbId", requireAuth, async (req, res) => {
     `INSERT INTO activity_feed (user_id, action, tmdb_id, metadata) VALUES ($1, 'watched', $2, $3)`,
     [req.user.id, tmdbId, JSON.stringify({ movie_title: movie_title || null })]
   );
+
+  await emitActivityToFriends(req.user, {
+    action: "watched",
+    tmdbId,
+    metadata: {
+      movie_title: movie_title || null
+    },
+    createdAt: rows[0]?.updated_at
+  });
 
   return res.json(rows[0]);
 });
@@ -266,7 +322,24 @@ ratingsRouter.patch("/reviews/:tmdbId", requireAuth, async (req, res) => {
     return res.status(404).json({ error: "Rating not found" });
   }
 
-  return res.json(rows[0]);
+  const ratingRow = rows[0];
+
+  await pool.query(
+    `INSERT INTO activity_feed (user_id, action, tmdb_id, metadata) VALUES ($1, 'reviewed', $2, $3)`,
+    [req.user.id, tmdbId, JSON.stringify({ review, rating: ratingRow.rating || null })]
+  );
+
+  await emitActivityToFriends(req.user, {
+    action: "reviewed",
+    tmdbId,
+    metadata: {
+      review,
+      rating: ratingRow.rating || null
+    },
+    createdAt: ratingRow.updated_at
+  });
+
+  return res.json(ratingRow);
 });
 
 // Delete own review (keeps rating, clears review text)
