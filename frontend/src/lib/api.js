@@ -101,7 +101,7 @@ export const api = {
   markWatched: (tmdbId) =>
     request(`/ratings/watched/${tmdbId}`, { method: "POST" }),
   feed: () => request("/feed/activity"),
-  friendsFeed: () => request("/feed/friends"),
+  friendsFeed: (page = 1, limit = 20) => request(`/feed/friends?page=${page}&limit=${limit}`),
   friendList: () => request("/friends"),
   friendRequests: () => request("/friends/requests"),
   friendSuggestions: (limit = 20) => request(`/friends/suggestions?limit=${limit}`),
@@ -144,6 +144,8 @@ export const api = {
 
   // Lists
   myLists: () => request("/lists/mine"),
+  publicLists: (page = 1, limit = 12, q = "") =>
+    request(`/lists/public?page=${page}&limit=${limit}&q=${encodeURIComponent(String(q || ""))}`),
   userLists: (userId) => request(`/lists/user/${userId}`),
   getList: (listId) => request(`/lists/${listId}`),
   createList: (payload) =>
