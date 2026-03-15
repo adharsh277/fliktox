@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import NavBar from "../../../components/NavBar";
+import BackButton from "../../../components/BackButton";
+import ShareMenu from "../../../components/ShareMenu";
 import { api, getCurrentUser } from "../../../lib/api";
 
 export default function ListDetailPage() {
@@ -70,11 +72,23 @@ export default function ListDetailPage() {
     <main>
       <NavBar />
       <section className="mx-auto w-full max-w-4xl px-4 py-8 md:px-6">
-        <Link href="/lists" className="text-sm text-gold hover:underline">← Back to Lists</Link>
+        <div className="flex items-center justify-between gap-3">
+          <BackButton fallbackHref="/lists" label="Back to Lists" />
+          <ShareMenu
+            title={list.title}
+            text={list.description || `Check out ${list.title} on Fliktox`}
+            path={`/lists/${list.id}`}
+            disabled={!list.is_public}
+            disabledMessage="This list is private. Make it public to share."
+          />
+        </div>
 
         <h1 className="mt-3 font-display text-4xl tracking-wide text-gold">{list.title}</h1>
         <p className="mt-1 text-sm text-mist/60">by @{list.username} · {list.movies.length} films</p>
         {list.description && <p className="mt-2 text-mist/75">{list.description}</p>}
+        <div className="mt-2">
+          <span className="text-xs text-mist/55">{list.is_public ? "Public" : "Private"}</span>
+        </div>
 
         {/* Add movies (owner only) */}
         {isOwner && (
