@@ -12,6 +12,9 @@ import { getSocket } from "../../lib/socket";
 export default function DashboardPage() {
   const router = useRouter();
   const [feed, setFeed] = useState([]);
+  const [feedPage, setFeedPage] = useState(1);
+  const [feedHasMore, setFeedHasMore] = useState(false);
+  const [feedLoadingMore, setFeedLoadingMore] = useState(false);
   const [friends, setFriends] = useState([]);
   const [search, setSearch] = useState("");
   const [results, setResults] = useState([]);
@@ -28,15 +31,37 @@ export default function DashboardPage() {
 
   async function refreshDashboardData() {
     const [feedRes, friendsRes, trendRes, requestsRes] = await Promise.all([
-      api.friendsFeed(),
+      api.friendsFeed(1, 20),
       api.friendList(),
       api.trending(),
       api.friendRequests()
     ]);
-    setFeed(feedRes);
+    setFeed(feedRes?.items || []);
+    setFeedPage(1);
+    setFeedHasMore(Boolean(feedRes?.pagination?.hasMore));
     setFriends(friendsRes);
     setTrending(trendRes);
     setFriendRequests(Array.isArray(requestsRes) ? requestsRes : []);
+  }
+
+  async function onLoadMoreFeed() {
+    if (feedLoadingMore || !feedHasMore) {
+      return;
+    }
+
+    const nextPage = feedPage + 1;
+    setFeedLoadingMore(true);
+    try {
+      const response = await api.friendsFeed(nextPage, 20);
+      const nextItems = Array.isArray(response?.items) ? response.items : [];
+      setFeed((prev) => [...prev, ...nextItems]);
+      setFeedPage(nextPage);
+      setFeedHasMore(Boolean(response?.pagination?.hasMore));
+    } catch {
+      // Keep existing feed when pagination request fails.
+    } finally {
+      setFeedLoadingMore(false);
+    }
   }
 
   useEffect(() => {
@@ -66,6 +91,10 @@ export default function DashboardPage() {
     if (!socket) return undefined;
     socketRef.current = socket;
 
+    socket.on("feed:newActivity", (item) => {
+      setFeed((prev) => [item, ...prev]);
+    });
+
     socket.on("feed:newRating", (item) => {
       setFeed((prev) => [item, ...prev]);
     });
@@ -76,6 +105,7 @@ export default function DashboardPage() {
     });
 
     return () => {
+      socket.off("feed:newActivity");
       socket.off("feed:newRating");
       socket.off("connect_error");
       socketRef.current = null;
@@ -151,7 +181,12 @@ export default function DashboardPage() {
 
           <h2 className="mt-6 text-lg font-semibold text-mist">Friends Activity</h2>
           <div className="mt-3">
-            <ActivityFeed items={feed} />
+            <ActivityFeed
+              items={feed}
+              hasMore={feedHasMore}
+              loadingMore={feedLoadingMore}
+              onLoadMore={onLoadMoreFeed}
+            />
           </div>
 
           <form onSubmit={onSearch} className="mt-6 flex gap-2">
