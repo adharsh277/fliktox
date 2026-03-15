@@ -124,7 +124,12 @@ export default function StatsPage() {
         )}
 
         {/* Recommendations */}
-        {recs && (recs.similar?.length > 0 || recs.friendRecommendations?.length > 0 || recs.genreRecommendations?.length > 0) && (
+        {recs && (
+          recs.similar?.length > 0 ||
+          recs.friendRecommendations?.length > 0 ||
+          recs.genreRecommendations?.length > 0 ||
+          recs.friendsWatchedRecommendations?.length > 0
+        ) && (
           <div className="mt-10">
             <h2 className="font-display text-4xl tracking-wide text-gold">Recommended for You</h2>
 
@@ -182,6 +187,29 @@ export default function StatsPage() {
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-mist/50">@{r.username}</span>
                         <span className="text-sm text-gold">{"★".repeat(r.rating)}</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {recs.friendsWatchedRecommendations?.length > 0 && (
+              <div className="mt-6">
+                <p className="text-sm text-mist/60">Popular among your friends</p>
+                <div className="mt-3 space-y-2">
+                  {recs.friendsWatchedRecommendations.map((r, i) => (
+                    <Link key={`${r.tmdb_id}-${i}-watched`} href={`/movie/${r.tmdb_id}`}
+                      className="flex items-center gap-3 rounded-lg bg-white/5 px-4 py-3 transition hover:bg-white/10">
+                      {r.poster_url ? (
+                        <img src={r.poster_url} alt={r.movie_title || ""} className="h-12 w-8 rounded object-cover" />
+                      ) : (
+                        <div className="flex h-12 w-8 items-center justify-center rounded bg-white/10 text-[8px] text-mist/30">?</div>
+                      )}
+                      <span className="flex-1 text-sm text-mist truncate">{r.movie_title || `Movie #${r.tmdb_id}`}</span>
+                      <div className="text-right">
+                        <p className="text-xs text-mist/50">{r.watched_by_friends} friends watched</p>
+                        {r.avg_friend_rating && <p className="text-xs text-gold">Avg {Number(r.avg_friend_rating).toFixed(1)} ★</p>}
                       </div>
                     </Link>
                   ))}
