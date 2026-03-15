@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import NavBar from "../../../components/NavBar";
+import BackButton from "../../../components/BackButton";
+import ShareMenu from "../../../components/ShareMenu";
 import { api, getCurrentUser } from "../../../lib/api";
 
 function StarDisplay({ rating }) {
@@ -228,6 +230,17 @@ export default function MoviePage() {
     <main>
       <NavBar />
       <section className="mx-auto w-full max-w-5xl px-4 py-8 md:px-6">
+        <div className="mb-4 flex items-center justify-between">
+          <BackButton fallbackHref="/discover" label="Back" />
+          {movie ? (
+            <ShareMenu
+              title={movie.title}
+              text={`Check out ${movie.title} on Fliktox`}
+              path={`/movie/${movie.id || movieId}`}
+            />
+          ) : null}
+        </div>
+
         {loading ? (
           <div className="flex min-h-[40vh] items-center justify-center">
             <div className="text-center">
