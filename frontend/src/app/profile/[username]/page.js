@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import NavBar from "../../../components/NavBar";
+import BackButton from "../../../components/BackButton";
+import ShareMenu from "../../../components/ShareMenu";
 import { api, getCurrentUser, setSession } from "../../../lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "/api";
@@ -326,6 +328,15 @@ export default function PublicProfilePage() {
     <main>
       <NavBar />
       <section className="mx-auto w-full max-w-6xl px-4 py-8 md:px-6">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <BackButton fallbackHref="/dashboard" label="Back" />
+          <ShareMenu
+            title={`${profile.username}'s profile`}
+            text={`Check out ${profile.username} on Fliktox`}
+            path={`/profile/${encodeURIComponent(profile.username || cleanUsername)}`}
+          />
+        </div>
+
         <div className="card-surface rounded-2xl p-6">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
             <div className="h-24 w-24 overflow-hidden rounded-full border border-white/20 bg-[#172638]">
