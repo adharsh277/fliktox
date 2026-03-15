@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import NavBar from "../../../components/NavBar";
+import BackButton from "../../../components/BackButton";
+import ShareMenu from "../../../components/ShareMenu";
 import { api, getCurrentUser } from "../../../lib/api";
 
 const TMDB_IMG = "https://image.tmdb.org/t/p/w500";
@@ -89,6 +91,15 @@ export default function ProfilePage() {
     <main>
       <NavBar />
       <section className="mx-auto w-full max-w-6xl px-4 py-8 md:px-6">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <BackButton fallbackHref="/dashboard" label="Back" />
+          <ShareMenu
+            title={`${user.username}'s profile`}
+            text={`Check out ${user.username} on Fliktox`}
+            path={`/user/${encodeURIComponent(String(user.username || "").trim())}`}
+          />
+        </div>
+
         {/* Profile Header */}
         <div className="flex items-start gap-5">
           <div className="grid h-20 w-20 shrink-0 place-items-center rounded-full bg-gradient-to-br from-gold to-ember text-3xl font-bold text-black">
