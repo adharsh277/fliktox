@@ -5,6 +5,14 @@ import { requireAuth } from "../middleware/auth.js";
 export const listsRouter = Router();
 listsRouter.use(requireAuth);
 
+function getPagination(query, defaultLimit = 20, maxLimit = 60) {
+  const page = Math.max(1, Number(query.page) || 1);
+  const requested = Number(query.limit) || defaultLimit;
+  const limit = Math.min(maxLimit, Math.max(1, requested));
+  const offset = (page - 1) * limit;
+  return { page, limit, offset };
+}
+
 // Create a new list
 listsRouter.post("/", async (req, res) => {
   const { title, description = "", is_public = true } = req.body;
@@ -32,6 +40,58 @@ listsRouter.get("/mine", async (req, res) => {
     [req.user.id]
   );
   return res.json(rows);
+});
+
+// Discover public lists across users
+listsRouter.get("/public", async (req, res) => {
+  const { page, limit, offset } = getPagination(req.query, 12, 60);
+  const query = String(req.query.q || "").trim();
+  const hasQuery = Boolean(query);
+
+  const params = hasQuery
+    ? [`%${query}%`, limit, offset]
+    : [limit, offset];
+
+  const whereClause = hasQuery
+    ? "WHERE l.is_public = TRUE AND (l.title ILIKE $1 OR l.description ILIKE $1 OR u.username ILIKE $1)"
+    : "WHERE l.is_public = TRUE";
+
+  const dataSql = `
+    SELECT l.*, u.username, COUNT(lm.id)::int AS movie_count
+    FROM lists l
+    JOIN users u ON u.id = l.user_id
+    LEFT JOIN list_movies lm ON lm.list_id = l.id
+    ${whereClause}
+    GROUP BY l.id, u.username
+    ORDER BY l.updated_at DESC
+    LIMIT $${hasQuery ? 2 : 1} OFFSET $${hasQuery ? 3 : 2}
+  `;
+
+  const countSql = `
+    SELECT COUNT(*)::int AS total
+    FROM lists l
+    JOIN users u ON u.id = l.user_id
+    ${whereClause}
+  `;
+
+  const [dataRes, countRes] = await Promise.all([
+    pool.query(dataSql, params),
+    pool.query(countSql, hasQuery ? [`%${query}%`] : [])
+  ]);
+
+  const total = countRes.rows[0]?.total || 0;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+
+  return res.json({
+    items: dataRes.rows,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages,
+      hasMore: page < totalPages
+    }
+  });
 });
 
 // Get public lists for a specific user
