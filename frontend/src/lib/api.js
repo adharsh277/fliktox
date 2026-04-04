@@ -188,5 +188,18 @@ export const api = {
   changeUsername: (payload) =>
     request("/auth/change-username", { method: "PUT", body: JSON.stringify(payload) }),
   changePassword: (payload) =>
-    request("/auth/change-password", { method: "PUT", body: JSON.stringify(payload) })
+    request("/auth/change-password", { method: "PUT", body: JSON.stringify(payload) }),
+
+  // Admin
+  adminOverview: () => request("/admin/overview"),
+  adminUsers: (q = "", limit = 30) =>
+    request(`/admin/users?q=${encodeURIComponent(String(q || ""))}&limit=${limit}`),
+  adminBanUser: (userId, ban = true) =>
+    request(`/admin/users/${userId}/ban`, {
+      method: "PATCH",
+      body: JSON.stringify({ ban })
+    }),
+  adminReviews: (q = "", limit = 40) =>
+    request(`/admin/reviews?q=${encodeURIComponent(String(q || ""))}&limit=${limit}`),
+  adminDeleteReview: (reviewId) => request(`/admin/reviews/${reviewId}`, { method: "DELETE" })
 };
