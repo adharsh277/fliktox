@@ -128,6 +128,7 @@ export default function NavBar() {
   const links = [
     { href: "/dashboard", label: "Dashboard", badge: unreadMessages > 0 ? unreadMessages : 0 },
     { href: "/friends", label: "Friends", badge: requestCount > 0 ? requestCount : 0 },
+    { href: "/clubs", label: "Clubs" },
     { href: "/discover", label: "Discover" },
     { href: "/watchlist", label: "Watchlist" },
     { href: "/lists", label: "Lists" },
