@@ -111,6 +111,24 @@ CREATE TABLE IF NOT EXISTS activity_feed (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS clubs (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(120) NOT NULL,
+  description TEXT DEFAULT '',
+  owner_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS club_members (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  club_id INTEGER REFERENCES clubs(id) ON DELETE CASCADE,
+  role VARCHAR(20) NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'member')),
+  joined_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE (user_id, club_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_ratings_user_id ON ratings(user_id);
 CREATE INDEX IF NOT EXISTS idx_friends_user_id ON friends(user_id);
 CREATE INDEX IF NOT EXISTS idx_friend_requests_receiver_status ON friend_requests(receiver_id, status);
@@ -122,6 +140,9 @@ CREATE INDEX IF NOT EXISTS idx_lists_user_id ON lists(user_id);
 CREATE INDEX IF NOT EXISTS idx_list_movies_list_id ON list_movies(list_id);
 CREATE INDEX IF NOT EXISTS idx_activity_feed_user_id ON activity_feed(user_id);
 CREATE INDEX IF NOT EXISTS idx_ratings_watchlist ON ratings(user_id) WHERE watchlist = TRUE;
+CREATE INDEX IF NOT EXISTS idx_clubs_owner_id ON clubs(owner_id);
+CREATE INDEX IF NOT EXISTS idx_club_members_club_id ON club_members(club_id);
+CREATE INDEX IF NOT EXISTS idx_club_members_user_id ON club_members(user_id);
 
 -- Backfill users.friends from existing accepted rows for compatibility.
 UPDATE users u
