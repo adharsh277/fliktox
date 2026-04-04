@@ -123,6 +123,8 @@ export default function NavBar() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  const isAdminUser = String(user?.email || "").toLowerCase() === "adharshu777@gmail.com";
+
   const links = [
     { href: "/dashboard", label: "Dashboard", badge: unreadMessages > 0 ? unreadMessages : 0 },
     { href: "/friends", label: "Friends", badge: requestCount > 0 ? requestCount : 0 },
@@ -131,6 +133,10 @@ export default function NavBar() {
     { href: "/lists", label: "Lists" },
     { href: "/stats", label: "Stats" }
   ];
+
+  if (isAdminUser) {
+    links.splice(1, 0, { href: "/admin", label: "Admin" });
+  }
 
   return (
     <header className="sticky top-0 z-20 border-b border-white/10 bg-[#07131f]/70 backdrop-blur-lg">
