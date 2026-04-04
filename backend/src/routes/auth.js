@@ -59,7 +59,7 @@ authRouter.post("/login", async (req, res) => {
   }
 
   const { rows } = await pool.query(
-    `SELECT id, username, email, password_hash, profile_photo, favorite_genres FROM users WHERE email = $1`,
+    `SELECT id, username, email, password_hash, profile_photo, favorite_genres, is_banned FROM users WHERE email = $1`,
     [email]
   );
 
@@ -71,6 +71,10 @@ authRouter.post("/login", async (req, res) => {
   const isValid = await bcrypt.compare(password, user.password_hash);
   if (!isValid) {
     return res.status(401).json({ error: "Invalid credentials" });
+  }
+
+  if (user.is_banned) {
+    return res.status(403).json({ error: "Your account is banned" });
   }
 
   const token = createToken(user);
