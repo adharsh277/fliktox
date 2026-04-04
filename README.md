@@ -43,6 +43,21 @@ fliktox/
 - User profile page with ratings, diary, reviews, lists, watchlist, and stats tabs
 - Activity feed tracks: rated, reviewed, watchlist_add, watched
 
+### Communities
+- ✅ Movie Clubs (`/clubs`)
+- ✅ Create club (`POST /api/clubs`)
+- ✅ Join club (`POST /api/clubs/:id/join`)
+- ✅ View club details + members (`GET /api/clubs/:id`)
+
+### Admin
+- ✅ Admin dashboard (`/admin`)
+- ✅ View users
+- ✅ Ban/unban user
+- ✅ Delete abusive reviews
+- ✅ Site overview stats
+- Admin access is restricted by backend allowlist (`ADMIN_EMAILS`).
+- In the UI, the Admin nav item is shown only for allowed admin accounts.
+
 ### Personalization
 - ✅ Personalized recommendations (multi-seed similar movies + genre-based + friend picks)
 - ✅ Movie metadata (title, poster, year) in stats, feed, and recommendations
@@ -77,6 +92,7 @@ Set these values in `backend/.env`:
 - `DATABASE_URL`
 - `JWT_SECRET`
 - `TMDB_API_KEY` (optional, fallback data is used when missing)
+- `ADMIN_EMAILS` (comma-separated admin emails)
 
 Initialize database and run backend:
 
