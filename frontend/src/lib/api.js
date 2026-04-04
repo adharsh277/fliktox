@@ -201,5 +201,11 @@ export const api = {
     }),
   adminReviews: (q = "", limit = 40) =>
     request(`/admin/reviews?q=${encodeURIComponent(String(q || ""))}&limit=${limit}`),
-  adminDeleteReview: (reviewId) => request(`/admin/reviews/${reviewId}`, { method: "DELETE" })
+  adminDeleteReview: (reviewId) => request(`/admin/reviews/${reviewId}`, { method: "DELETE" }),
+
+  // Clubs
+  createClub: (payload) => request("/clubs", { method: "POST", body: JSON.stringify(payload) }),
+  joinClub: (clubId) => request(`/clubs/${clubId}/join`, { method: "POST" }),
+  myClubs: () => request("/clubs/mine"),
+  club: (clubId) => request(`/clubs/${clubId}`)
 };
