@@ -2,6 +2,15 @@
 
 Next.js + Tailwind frontend for Fliktox.
 
+## Key Routes
+
+- `/dashboard`
+- `/discover`
+- `/watchlist`
+- `/lists`
+- `/clubs` and `/clubs/:id`
+- `/admin` (visible only for allowed admin account)
+
 ## Setup
 
 1. Install dependencies:
