@@ -103,6 +103,36 @@ npm run dev
 
 Backend default URL: `http://localhost:4000`
 
+## Daily Start
+
+When you come back to the project, use these commands:
+
+```bash
+# Terminal 1 - Start PostgreSQL
+docker compose up -d db
+
+# Terminal 2 - Start Backend
+cd backend && npm run dev
+
+# Terminal 3 - Start Frontend
+cd frontend && npm run dev
+```
+
+If this is a fresh machine or a new clone, run the one-time setup first:
+
+```bash
+cd backend && npm install
+cd frontend && npm install
+cd backend && npm run db:init
+```
+
+Notes:
+
+- Backend reads `backend/.env` for `DATABASE_URL`, `JWT_SECRET`, `TMDB_API_KEY`, and `ADMIN_EMAILS`.
+- `TMDB_API_KEY` is required for live TMDB movie data.
+- `ADMIN_EMAILS` controls who can see and use the admin panel.
+- Admin login is currently `adharshu777@gmail.com`.
+
 ## Frontend Setup
 
 ```bash
