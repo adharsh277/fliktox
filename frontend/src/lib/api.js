@@ -164,6 +164,7 @@ export const api = {
 
   // Recommendations
   recommendations: () => request("/recommendations"),
+  trendingLists: () => request("/trending?force=true"),
 
   // Profile
   publicProfile: (username) => request(`/profile/${normalizeUsername(username)}`),
