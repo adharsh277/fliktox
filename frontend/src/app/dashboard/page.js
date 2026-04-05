@@ -40,7 +40,7 @@ export default function DashboardPage() {
     setFeedPage(1);
     setFeedHasMore(Boolean(feedRes?.pagination?.hasMore));
     setFriends(friendsRes);
-    setTrending(trendRes);
+    setTrending(Array.isArray(trendRes) ? trendRes : []);
     setFriendRequests(Array.isArray(requestsRes) ? requestsRes : []);
   }
 
