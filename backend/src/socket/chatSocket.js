@@ -1,6 +1,7 @@
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
+import { pool } from "../db/pool.js";
 
 let io;
 
@@ -56,6 +57,21 @@ export function registerChatSocket(httpServer) {
     socket.join(`user:${userId}`);
     socket.join(String(userId));
 
+    const joinMemberClubs = async () => {
+      const { rows } = await pool.query(
+        `SELECT club_id FROM club_members WHERE user_id = $1`,
+        [userId]
+      );
+
+      for (const row of rows) {
+        socket.join(`club:${row.club_id}`);
+      }
+    };
+
+    joinMemberClubs().catch(() => {
+      // Keep private chat connected even if club room auto-join fails.
+    });
+
     socket.on("register", (registeredUserId) => {
       if (Number(registeredUserId) !== userId) {
         return;
@@ -63,6 +79,48 @@ export function registerChatSocket(httpServer) {
 
       socket.join(`user:${userId}`);
       socket.join(String(userId));
+    });
+
+    socket.on("club:join", async ({ clubId }) => {
+      const numericClubId = Number(clubId);
+      if (!numericClubId) {
+        return;
+      }
+
+      try {
+        const { rows } = await pool.query(
+          `SELECT 1 FROM club_members WHERE club_id = $1 AND user_id = $2`,
+          [numericClubId, userId]
+        );
+
+        if (rows[0]) {
+          socket.join(`club:${numericClubId}`);
+        }
+      } catch {
+        // Ignore join failures and keep socket connected.
+      }
+    });
+
+    socket.on("club:leave", ({ clubId }) => {
+      const numericClubId = Number(clubId);
+      if (!numericClubId) {
+        return;
+      }
+
+      socket.leave(`club:${numericClubId}`);
+    });
+
+    socket.on("club:typing", ({ clubId }) => {
+      const numericClubId = Number(clubId);
+      if (!numericClubId) {
+        return;
+      }
+
+      socket.to(`club:${numericClubId}`).emit("club:typing", {
+        clubId: numericClubId,
+        userId,
+        username: socket.data.user.username
+      });
     });
 
     // Mark online and broadcast
