@@ -19,6 +19,7 @@ import { profileRouter } from "./routes/profile.js";
 import { usersRouter } from "./routes/users.js";
 import { adminRouter } from "./routes/admin.js";
 import { clubsRouter } from "./routes/clubs.js";
+import { trendingRouter } from "./routes/trending.js";
 
 export const app = express();
 
@@ -82,6 +83,7 @@ app.use("/api/profile", profileRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/clubs", clubsRouter);
+app.use("/api/trending", trendingRouter);
 
 app.use((_, res) => {
   res.status(404).json({ error: "Not found" });
