@@ -206,6 +206,20 @@ export const api = {
   // Clubs
   createClub: (payload) => request("/clubs", { method: "POST", body: JSON.stringify(payload) }),
   joinClub: (clubId) => request(`/clubs/${clubId}/join`, { method: "POST" }),
+  discoverClubs: (q = "", limit = 12) =>
+    request(`/clubs/discover?q=${encodeURIComponent(String(q || ""))}&limit=${limit}`),
   myClubs: () => request("/clubs/mine"),
-  club: (clubId) => request(`/clubs/${clubId}`)
+  club: (clubId) => request(`/clubs/${clubId}`),
+  addClubMember: (clubId, userId) =>
+    request(`/clubs/${clubId}/members`, {
+      method: "POST",
+      body: JSON.stringify({ userId })
+    }),
+  removeClubMember: (clubId, userId) => request(`/clubs/${clubId}/members/${userId}`, { method: "DELETE" }),
+  clubMessages: (clubId, limit = 50) => request(`/clubs/${clubId}/messages?limit=${limit}`),
+  sendClubMessage: (clubId, message) =>
+    request(`/clubs/${clubId}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ message })
+    })
 };
