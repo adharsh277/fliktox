@@ -65,13 +65,20 @@ usersRouter.get("/search", requireAuth, async (req, res) => {
     return res.json([]);
   }
 
+  const numericId = Number.parseInt(q, 10);
+  const hasNumericId = Number.isInteger(numericId) && numericId > 0;
+
   const { rows } = await pool.query(
     `SELECT id, username, profile_photo
      FROM users
-     WHERE username ILIKE $1 AND id != $2
+     WHERE id != $2
+       AND (
+         username ILIKE $1
+         OR ($3::boolean = TRUE AND id = $4)
+       )
      ORDER BY username ASC
      LIMIT 10`,
-    [`%${q}%`, req.user.id]
+    [`%${q}%`, req.user.id, hasNumericId, hasNumericId ? numericId : null]
   );
 
   return res.json(rows);
