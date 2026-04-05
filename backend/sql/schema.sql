@@ -129,6 +129,14 @@ CREATE TABLE IF NOT EXISTS club_members (
   UNIQUE (user_id, club_id)
 );
 
+CREATE TABLE IF NOT EXISTS club_messages (
+  id SERIAL PRIMARY KEY,
+  club_id INTEGER REFERENCES clubs(id) ON DELETE CASCADE,
+  sender_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  message TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS idx_ratings_user_id ON ratings(user_id);
 CREATE INDEX IF NOT EXISTS idx_friends_user_id ON friends(user_id);
 CREATE INDEX IF NOT EXISTS idx_friend_requests_receiver_status ON friend_requests(receiver_id, status);
@@ -143,6 +151,8 @@ CREATE INDEX IF NOT EXISTS idx_ratings_watchlist ON ratings(user_id) WHERE watch
 CREATE INDEX IF NOT EXISTS idx_clubs_owner_id ON clubs(owner_id);
 CREATE INDEX IF NOT EXISTS idx_club_members_club_id ON club_members(club_id);
 CREATE INDEX IF NOT EXISTS idx_club_members_user_id ON club_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_club_messages_club_created ON club_messages(club_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_club_messages_sender_id ON club_messages(sender_id);
 
 -- Backfill users.friends from existing accepted rows for compatibility.
 UPDATE users u
