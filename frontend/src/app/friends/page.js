@@ -17,8 +17,18 @@ function toAvatar(url) {
 export default function FriendsPage() {
   const router = useRouter();
   const [friends, setFriends] = useState([]);
+  const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searched, setSearched] = useState(false);
+  const [sentIds, setSentIds] = useState(new Set());
+  const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  async function refreshFriends() {
+    const rows = await api.friendList();
+    setFriends(Array.isArray(rows) ? rows : []);
+  }
 
   useEffect(() => {
     const current = getCurrentUser();
@@ -27,10 +37,7 @@ export default function FriendsPage() {
       return;
     }
 
-    api.friendList()
-      .then((rows) => {
-        setFriends(Array.isArray(rows) ? rows : []);
-      })
+    refreshFriends()
       .catch((err) => {
         setError(err.message || "Failed to load friends");
       })
@@ -38,6 +45,43 @@ export default function FriendsPage() {
         setLoading(false);
       });
   }, [router]);
+
+  async function onSearch(event) {
+    event.preventDefault();
+    setError("");
+
+    const value = query.trim();
+    if (!value) {
+      setSearchResults([]);
+      setSearched(false);
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const rows = await api.searchUsers(value);
+      const friendIds = new Set((friends || []).map((friend) => friend.id));
+      const filtered = (rows || []).filter((user) => !friendIds.has(user.id));
+      setSearchResults(filtered);
+      setSearched(true);
+    } catch (err) {
+      setError(err.message || "Failed to search users");
+      setSearchResults([]);
+      setSearched(true);
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  async function onSendRequest(userId) {
+    setError("");
+    try {
+      await api.sendRequest(userId);
+      setSentIds((prev) => new Set([...prev, userId]));
+    } catch (err) {
+      setError(err.message || "Failed to send request");
+    }
+  }
 
   return (
     <main>
@@ -53,6 +97,61 @@ export default function FriendsPage() {
               View Requests
             </Link>
           </div>
+        </div>
+
+        <div className="card-surface mb-6 rounded-xl p-4">
+          <h2 className="text-lg font-semibold text-mist">Add Friend</h2>
+          <p className="mt-1 text-xs text-mist/60">Search by username or user ID.</p>
+
+          <form onSubmit={onSearch} className="mt-3 flex gap-2">
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Enter username or user ID"
+              className="w-full rounded-lg border border-white/20 bg-[#102032] px-3 py-2 text-sm outline-none focus:border-ember"
+            />
+            <button type="submit" className="rounded-lg bg-ember px-4 py-2 text-sm text-white" disabled={searching}>
+              {searching ? "Searching..." : "Search"}
+            </button>
+          </form>
+
+          {searched && searchResults.length === 0 ? (
+            <p className="mt-3 text-xs text-mist/60">No users found.</p>
+          ) : null}
+
+          {searchResults.length > 0 ? (
+            <div className="mt-3 space-y-2">
+              {searchResults.map((user) => (
+                <div key={user.id} className="flex items-center justify-between rounded-lg border border-white/10 px-3 py-2">
+                  <div className="flex items-center gap-3">
+                    {user.profile_photo ? (
+                      <img src={toAvatar(user.profile_photo)} alt={user.username} className="h-8 w-8 rounded-full object-cover" />
+                    ) : (
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ember/30 text-xs font-bold text-gold">
+                        {user.username?.[0]?.toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm text-mist">{user.username}</p>
+                      <p className="text-[11px] text-mist/55">ID: {user.id}</p>
+                    </div>
+                  </div>
+
+                  {sentIds.has(user.id) ? (
+                    <span className="text-xs text-mist/55">Request sent</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onSendRequest(user.id)}
+                      className="rounded-lg bg-ember px-3 py-1 text-xs text-white"
+                    >
+                      Add Friend
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         {loading ? (
