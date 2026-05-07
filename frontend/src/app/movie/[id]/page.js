@@ -6,6 +6,7 @@ import Link from "next/link";
 import NavBar from "../../../components/NavBar";
 import BackButton from "../../../components/BackButton";
 import ShareMenu from "../../../components/ShareMenu";
+import ReviewCard from "../../../components/ReviewCard";
 import { api, getCurrentUser } from "../../../lib/api";
 
 function StarDisplay({ rating }) {
@@ -360,82 +361,28 @@ export default function MoviePage() {
               {reviewsLoading ? (
                 <p className="mt-4 text-sm text-mist/50">Loading reviews...</p>
               ) : reviews.length > 0 ? (
-                <div className="mt-4 grid gap-4">
+                <div className="mt-4">
                   {reviews.map((r) => (
-                    <div key={`${r.user_id}-${r.updated_at}`} className="card-surface rounded-2xl p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          {r.profile_photo ? (
-                            <img src={r.profile_photo} alt={r.username} className="h-10 w-10 rounded-full object-cover" />
-                          ) : (
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-ember/30 text-sm font-bold text-gold">
-                              {r.username?.[0]?.toUpperCase()}
-                            </div>
-                          )}
-                          <div>
-                            <Link href={`/profile/${String(r.username || "").trim()}`} className="font-medium text-gold hover:underline">
-                              {r.username}
-                            </Link>
-                            <div className="flex items-center gap-2 text-sm">
-                              <StarDisplay rating={r.rating} />
-                              <span className="text-mist/50">{new Date(r.updated_at).toLocaleDateString()}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {currentUser && currentUser.id === r.user_id && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => { setEditingReview(r.user_id); setEditText(r.review); }}
-                                className="rounded-lg border border-white/15 px-2 py-1 text-xs text-mist/60 hover:border-gold hover:text-gold"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => onDeleteReview(movieId)}
-                                className="rounded-lg border border-white/15 px-2 py-1 text-xs text-mist/60 hover:border-red-400 hover:text-red-400"
-                              >
-                                Delete
-                              </button>
-                            </>
-                          )}
-                          {currentUser && currentUser.id !== r.user_id && !sentRequests.has(r.user_id) && (
-                            <button
-                              type="button"
-                              onClick={() => sendFriendRequest(r.user_id)}
-                              className="rounded-full border border-ember/50 px-3 py-1 text-xs text-ember hover:bg-ember/15"
-                            >
-                              Add Friend
-                            </button>
-                          )}
-                          {sentRequests.has(r.user_id) && (
-                            <span className="text-xs text-mist/50">Request Sent</span>
-                          )}
-                        </div>
-                      </div>
-                      {editingReview === r.user_id ? (
-                        <div className="mt-3">
-                          <textarea
-                            value={editText}
-                            onChange={(e) => setEditText(e.target.value)}
-                            rows={3}
-                            className="w-full rounded-xl border border-white/20 bg-[#102032] px-3 py-2 text-sm outline-none focus:border-ember"
-                          />
-                          <div className="mt-2 flex gap-2">
-                            <button onClick={() => onEditReview(movieId)} className="rounded-lg bg-ember px-3 py-1 text-xs text-white">Save</button>
-                            <button onClick={() => setEditingReview(null)} className="rounded-lg border border-white/20 px-3 py-1 text-xs text-mist/60">Cancel</button>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="mt-3 text-sm text-mist/85">{r.review}</p>
-                      )}
-                    </div>
+                    <ReviewCard
+                      key={`${r.id}-${r.updated_at}`}
+                      review={{
+                        ...r,
+                        tmdb_id: movieId,
+                        movie_id: movieId,
+                      }}
+                      onDelete={onDeleteReview}
+                      onEdit={(userId) => {
+                        setEditingReview(userId);
+                        setEditText(r.review);
+                      }}
+                      onFriendRequest={sendFriendRequest}
+                      currentUser={currentUser}
+                      sentRequests={sentRequests}
+                    />
                   ))}
                   {/* Pagination */}
                   {reviewTotalPages > 1 && (
-                    <div className="mt-2 flex items-center justify-center gap-3">
+                    <div className="mt-4 flex items-center justify-center gap-3">
                       <button
                         onClick={() => loadReviews(reviewPage - 1)}
                         disabled={reviewPage <= 1}

@@ -359,3 +359,221 @@ ratingsRouter.delete("/reviews/:tmdbId", requireAuth, async (req, res) => {
 
   return res.json({ ok: true });
 });
+
+// ── Review Likes Endpoints ──
+
+// Like a review
+ratingsRouter.post("/:ratingId/like", requireAuth, async (req, res) => {
+  const ratingId = Number(req.params.ratingId);
+
+  // Verify review exists
+  const ratingCheck = await pool.query(
+    `SELECT id FROM ratings WHERE id = $1`,
+    [ratingId]
+  );
+
+  if (ratingCheck.rows.length === 0) {
+    return res.status(404).json({ error: "Review not found" });
+  }
+
+  // Insert like (ignore if already liked)
+  const { rows } = await pool.query(
+    `INSERT INTO review_likes (rating_id, user_id, created_at)
+     VALUES ($1, $2, NOW())
+     ON CONFLICT (rating_id, user_id) DO NOTHING
+     RETURNING *`,
+    [ratingId, req.user.id]
+  );
+
+  // Get updated like count
+  const countRes = await pool.query(
+    `SELECT COUNT(*)::int AS like_count FROM review_likes WHERE rating_id = $1`,
+    [ratingId]
+  );
+
+  return res.json({
+    liked: true,
+    likeCount: countRes.rows[0].like_count
+  });
+});
+
+// Unlike a review
+ratingsRouter.delete("/:ratingId/like", requireAuth, async (req, res) => {
+  const ratingId = Number(req.params.ratingId);
+
+  await pool.query(
+    `DELETE FROM review_likes WHERE rating_id = $1 AND user_id = $2`,
+    [ratingId, req.user.id]
+  );
+
+  // Get updated like count
+  const countRes = await pool.query(
+    `SELECT COUNT(*)::int AS like_count FROM review_likes WHERE rating_id = $1`,
+    [ratingId]
+  );
+
+  return res.json({
+    liked: false,
+    likeCount: countRes.rows[0].like_count
+  });
+});
+
+// Get likes for a review (with user info)
+ratingsRouter.get("/:ratingId/likes", async (req, res) => {
+  const ratingId = Number(req.params.ratingId);
+
+  const { rows } = await pool.query(
+    `SELECT rl.id, rl.created_at,
+            u.id AS user_id, u.username, u.profile_photo
+     FROM review_likes rl
+     JOIN users u ON u.id = rl.user_id
+     WHERE rl.rating_id = $1
+     ORDER BY rl.created_at DESC`,
+    [ratingId]
+  );
+
+  const countRes = await pool.query(
+    `SELECT COUNT(*)::int AS like_count FROM review_likes WHERE rating_id = $1`,
+    [ratingId]
+  );
+
+  return res.json({
+    likes: rows,
+    likeCount: countRes.rows[0].like_count
+  });
+});
+
+// ── Review Comments Endpoints ──
+
+// Add comment to a review
+ratingsRouter.post("/:ratingId/comments", requireAuth, async (req, res) => {
+  const ratingId = Number(req.params.ratingId);
+  const { comment } = req.body;
+
+  if (!comment || typeof comment !== "string" || comment.trim().length === 0) {
+    return res.status(400).json({ error: "Comment text is required" });
+  }
+
+  // Verify review exists
+  const ratingCheck = await pool.query(
+    `SELECT id FROM ratings WHERE id = $1`,
+    [ratingId]
+  );
+
+  if (ratingCheck.rows.length === 0) {
+    return res.status(404).json({ error: "Review not found" });
+  }
+
+  const { rows } = await pool.query(
+    `INSERT INTO review_comments (rating_id, user_id, comment, created_at, updated_at)
+     VALUES ($1, $2, $3, NOW(), NOW())
+     RETURNING id, rating_id, user_id, comment, created_at, updated_at`,
+    [ratingId, req.user.id, comment.trim()]
+  );
+
+  // Fetch comment with user info
+  const fullComment = await pool.query(
+    `SELECT rc.id, rc.rating_id, rc.comment, rc.created_at, rc.updated_at,
+            u.id AS user_id, u.username, u.profile_photo
+     FROM review_comments rc
+     JOIN users u ON u.id = rc.user_id
+     WHERE rc.id = $1`,
+    [rows[0].id]
+  );
+
+  return res.status(201).json(fullComment.rows[0]);
+});
+
+// Get comments for a review
+ratingsRouter.get("/:ratingId/comments", async (req, res) => {
+  const ratingId = Number(req.params.ratingId);
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+  const offset = (page - 1) * limit;
+
+  const [commentsRes, countRes] = await Promise.all([
+    pool.query(
+      `SELECT rc.id, rc.rating_id, rc.comment, rc.created_at, rc.updated_at,
+              u.id AS user_id, u.username, u.profile_photo
+       FROM review_comments rc
+       JOIN users u ON u.id = rc.user_id
+       WHERE rc.rating_id = $1
+       ORDER BY rc.created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [ratingId, limit, offset]
+    ),
+    pool.query(
+      `SELECT COUNT(*)::int AS total FROM review_comments WHERE rating_id = $1`,
+      [ratingId]
+    )
+  ]);
+
+  return res.json({
+    comments: commentsRes.rows,
+    total: countRes.rows[0].total,
+    page,
+    limit,
+    totalPages: Math.ceil(countRes.rows[0].total / limit)
+  });
+});
+
+// Update own comment
+ratingsRouter.patch("/comments/:commentId", requireAuth, async (req, res) => {
+  const commentId = Number(req.params.commentId);
+  const { comment } = req.body;
+
+  if (!comment || typeof comment !== "string" || comment.trim().length === 0) {
+    return res.status(400).json({ error: "Comment text is required" });
+  }
+
+  // Verify user owns the comment
+  const commentCheck = await pool.query(
+    `SELECT id FROM review_comments WHERE id = $1 AND user_id = $2`,
+    [commentId, req.user.id]
+  );
+
+  if (commentCheck.rows.length === 0) {
+    return res.status(404).json({ error: "Comment not found or unauthorized" });
+  }
+
+  const { rows } = await pool.query(
+    `UPDATE review_comments SET comment = $1, updated_at = NOW()
+     WHERE id = $2 AND user_id = $3
+     RETURNING id, rating_id, comment, created_at, updated_at`,
+    [comment.trim(), commentId, req.user.id]
+  );
+
+  // Fetch updated comment with user info
+  const fullComment = await pool.query(
+    `SELECT rc.id, rc.rating_id, rc.comment, rc.created_at, rc.updated_at,
+            u.id AS user_id, u.username, u.profile_photo
+     FROM review_comments rc
+     JOIN users u ON u.id = rc.user_id
+     WHERE rc.id = $1`,
+    [commentId]
+  );
+
+  return res.json(fullComment.rows[0]);
+});
+
+// Delete own comment
+ratingsRouter.delete("/comments/:commentId", requireAuth, async (req, res) => {
+  const commentId = Number(req.params.commentId);
+
+  // Verify user owns the comment
+  const commentCheck = await pool.query(
+    `SELECT id FROM review_comments WHERE id = $1 AND user_id = $2`,
+    [commentId, req.user.id]
+  );
+
+  if (commentCheck.rows.length === 0) {
+    return res.status(404).json({ error: "Comment not found or unauthorized" });
+  }
+
+  await pool.query(
+    `DELETE FROM review_comments WHERE id = $1 AND user_id = $2`,
+    [commentId, req.user.id]
+  );
+
+  return res.json({ ok: true });
+});

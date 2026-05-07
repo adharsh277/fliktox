@@ -137,6 +137,25 @@ CREATE TABLE IF NOT EXISTS club_messages (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Review likes table
+CREATE TABLE IF NOT EXISTS review_likes (
+  id SERIAL PRIMARY KEY,
+  rating_id INTEGER REFERENCES ratings(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE (rating_id, user_id)
+);
+
+-- Review comments table
+CREATE TABLE IF NOT EXISTS review_comments (
+  id SERIAL PRIMARY KEY,
+  rating_id INTEGER REFERENCES ratings(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  comment TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS idx_ratings_user_id ON ratings(user_id);
 CREATE INDEX IF NOT EXISTS idx_friends_user_id ON friends(user_id);
 CREATE INDEX IF NOT EXISTS idx_friend_requests_receiver_status ON friend_requests(receiver_id, status);
@@ -148,6 +167,10 @@ CREATE INDEX IF NOT EXISTS idx_lists_user_id ON lists(user_id);
 CREATE INDEX IF NOT EXISTS idx_list_movies_list_id ON list_movies(list_id);
 CREATE INDEX IF NOT EXISTS idx_activity_feed_user_id ON activity_feed(user_id);
 CREATE INDEX IF NOT EXISTS idx_ratings_watchlist ON ratings(user_id) WHERE watchlist = TRUE;
+CREATE INDEX IF NOT EXISTS idx_review_likes_rating_id ON review_likes(rating_id);
+CREATE INDEX IF NOT EXISTS idx_review_likes_user_id ON review_likes(user_id);
+CREATE INDEX IF NOT EXISTS idx_review_comments_rating_id ON review_comments(rating_id);
+CREATE INDEX IF NOT EXISTS idx_review_comments_user_id ON review_comments(user_id);
 CREATE INDEX IF NOT EXISTS idx_clubs_owner_id ON clubs(owner_id);
 CREATE INDEX IF NOT EXISTS idx_club_members_club_id ON club_members(club_id);
 CREATE INDEX IF NOT EXISTS idx_club_members_user_id ON club_members(user_id);

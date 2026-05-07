@@ -222,5 +222,28 @@ export const api = {
     request(`/clubs/${clubId}/messages`, {
       method: "POST",
       body: JSON.stringify({ message })
-    })
+    }),
+  
+  // Review Likes
+  likeReview: (ratingId) =>
+    request(`/ratings/${ratingId}/like`, { method: "POST" }),
+  unlikeReview: (ratingId) =>
+    request(`/ratings/${ratingId}/like`, { method: "DELETE" }),
+  reviewLikes: (ratingId) => request(`/ratings/${ratingId}/likes`),
+  
+  // Review Comments
+  addReviewComment: (ratingId, comment) =>
+    request(`/ratings/${ratingId}/comments`, {
+      method: "POST",
+      body: JSON.stringify({ comment })
+    }),
+  reviewComments: (ratingId, page = 1, limit = 20) =>
+    request(`/ratings/${ratingId}/comments?page=${page}&limit=${limit}`),
+  updateReviewComment: (commentId, comment) =>
+    request(`/ratings/comments/${commentId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ comment })
+    }),
+  deleteReviewComment: (commentId) =>
+    request(`/ratings/comments/${commentId}`, { method: "DELETE" })
 };
