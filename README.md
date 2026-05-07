@@ -1,103 +1,289 @@
-# Fliktox
+# Fliktox 🎬
 
-Fliktox is a social movie tracking platform inspired by Letterboxd, with social feed and friend chat features.
+Fliktox is a social movie tracking and discovery platform inspired by Letterboxd. Share ratings and reviews, connect with friends, join movie clubs, and get personalized recommendations.
 
-## Tech Stack
+## ✨ Features Overview
 
-- Frontend: Next.js + Tailwind CSS
-- Backend: Node.js + Express + Socket.io
-- Database: PostgreSQL
-- Movie data: TMDB API
+**Movie Tracking & Reviews**
+- Rate movies (1-5 stars) with edit/delete capability
+- Write detailed reviews with formatting
+- Add movies to watchlist and mark watched
+- View rating analytics and review distribution
 
-## Project Structure
+**Social Network**
+- Find and add friends
+- Real-time friend chat with Socket.io
+- View friend activity in personalized feed
+- User profiles with tabs: ratings, reviews, lists, watchlist, stats
 
-```text
+**Communities**
+- Create and join movie clubs
+- Browse club members and discussions
+- Discover movies within club context
+
+**Personalization**
+- Get AI-powered movie recommendations
+- Multi-seed algorithm (similar movies + genres + friend picks)
+- Personalized discovery feed based on activity
+
+**Admin Tools**
+- Dashboard with site analytics
+- User management (view, ban/unban)
+- Moderation (delete abusive reviews)
+- User statistics and platform overview
+
+**Explore & Discover**
+- Trending movies
+- Popular & top-rated films
+- Browse by genre
+- Search functionality
+- Stats dashboard with viewing analytics
+
+## 🛠 Tech Stack
+
+| Layer | Tech |
+|-------|------|
+| **Frontend** | Next.js 14, Tailwind CSS, Socket.io client |
+| **Backend** | Node.js, Express, Socket.io, JWT auth |
+| **Database** | PostgreSQL |
+| **APIs** | TMDB (The Movie Database) |
+| **Deployment** | Docker & Docker Compose |
+
+## 📁 Project Structure
+
+```
 fliktox/
-	backend/   # Express API + WebSocket chat + PostgreSQL schema
-	frontend/  # Next.js app with landing, dashboard, movie, profile pages
+├── backend/               # Express API + WebSocket server
+│   ├── src/
+│   │   ├── routes/        # API endpoints
+│   │   ├── services/      # Business logic (e.g., trending cache)
+│   │   ├── middleware/    # Auth, admin checks
+│   │   ├── socket/        # WebSocket chat handlers
+│   │   ├── db/            # Database config & initialization
+│   │   └── utils/         # Helpers (TMDB API calls)
+│   └── sql/               # PostgreSQL schema
+├── frontend/              # Next.js application
+│   ├── src/
+│   │   ├── app/           # Pages & layouts
+│   │   ├── components/    # Reusable UI components
+│   │   └── lib/           # API client, socket config
+│   └── public/            # Static assets
+└── docker-compose.yml     # Multi-container setup
 ```
 
-## Features Implemented
+## 🚀 Quick Start
 
-### Core
-- Landing page with hero section and top 10 trending movie grid
-- User signup/login with JWT auth
-- Dashboard with activity feed (own + friends) and movie search
-- Discovery page with trending, popular, top-rated, and browse
+### Using Docker (Recommended)
 
-### Movie Interaction
-- ✅ Rate movies (1-5 stars, upsert — update existing rating)
-- ✅ Write, edit, and delete reviews
-- ✅ Add / remove movies from watchlist (duplicate-safe via DB constraint)
-- ✅ Mark movies as watched
-- ✅ Average rating + rating distribution chart on movie page
-- ✅ Paginated reviews with page navigation
-- ✅ Pre-populated form with user's existing rating/review
+```bash
+# Start all services (database, backend, frontend)
+docker-compose up
 
-### Social
-- Friend request and accept workflow
-- ✅ Dedicated friend requests page (`/friends/requests`)
-- ✅ Dedicated friends list page (`/friends`)
-- ✅ Profile-level friend actions (Add Friend, Request Sent, Remove Friend)
-- Private friend chat (REST + Socket.io live events)
-- User profile page with ratings, diary, reviews, lists, watchlist, and stats tabs
-- Activity feed tracks: rated, reviewed, watchlist_add, watched
+# Access:
+# - Frontend: http://localhost:3000
+# - Backend: http://localhost:4000
+# - Database: postgres://localhost:5432
+```
 
-### Communities
-- ✅ Movie Clubs (`/clubs`)
-- ✅ Create club (`POST /api/clubs`)
-- ✅ Join club (`POST /api/clubs/:id/join`)
-- ✅ View club details + members (`GET /api/clubs/:id`)
+### Local Development
 
-### Admin
-- ✅ Admin dashboard (`/admin`)
-- ✅ View users
-- ✅ Ban/unban user
-- ✅ Delete abusive reviews
-- ✅ Site overview stats
-- Admin access is restricted by backend allowlist (`ADMIN_EMAILS`).
-- In the UI, the Admin nav item is shown only for allowed admin accounts.
-
-### Personalization
-- ✅ Personalized recommendations (multi-seed similar movies + genre-based + friend picks)
-- ✅ Movie metadata (title, poster, year) in stats, feed, and recommendations
-- ✅ Rating analytics with full 5-star distribution
-- Movie lists (create, edit, delete, add/remove movies)
-- Dedicated watchlist page with poster grid
-
-### UX
-- ✅ Loading spinners on dashboard, discover, movie, stats pages
-- ✅ Quick action buttons (watchlist, watched) on movie page
-- Responsive design with Tailwind CSS
-
-## What We Modified Recently
-
-- Updated profile experience in `frontend/src/app/profile/[username]/page.js`
-- Added upload storage path in `backend/uploads/avatars/`
-- Added shared frontend API client in `frontend/src/lib/api.js`
-- Added movie details screen in `frontend/src/app/movie/[id]/page.js`
-- Added backend users route in `backend/src/routes/users.js`
-- Added backend app bootstrap in `backend/src/app.js`
-
-## Backend Setup
-
+**Backend Setup:**
 ```bash
 cd backend
 npm install
 cp .env.example .env
+npm run db:init    # Initialize PostgreSQL database
+npm run dev        # Start on port 4000
 ```
 
-Set these values in `backend/.env`:
+**Frontend Setup:**
+```bash
+cd frontend
+npm install
+cp .env.example .env.local
+npm run dev        # Start on port 3000
+```
 
-- `DATABASE_URL`
-- `JWT_SECRET`
-- `TMDB_API_KEY` (optional, fallback data is used when missing)
-- `ADMIN_EMAILS` (comma-separated admin emails)
+## ⚙️ Environment Variables
 
-Initialize database and run backend:
+### Backend (`backend/.env`)
+```
+PORT=4000
+DATABASE_URL=postgres://fliktox:fliktox@localhost:5432/fliktox
+JWT_SECRET=your_jwt_secret_key
+TMDB_API_KEY=your_tmdb_api_key
+ADMIN_EMAILS=admin@example.com,mod@example.com
+CLIENT_ORIGIN=http://localhost:3000
+```
+
+### Frontend (`frontend/.env.local`)
+```
+NEXT_PUBLIC_BACKEND_URL=http://localhost:4000
+```
+
+## 📚 API Documentation
+
+### Authentication
+- `POST /api/auth/signup` - Create account
+- `POST /api/auth/login` - Login with JWT
+- `POST /api/auth/logout` - Logout
+
+### Movies
+- `GET /api/movies/:id` - Get movie details
+- `GET /api/movies/search` - Search movies
+- `GET /api/trending` - Trending movies (cached)
+
+### Ratings & Reviews
+- `POST /api/ratings` - Rate/review a movie
+- `PATCH /api/ratings/:id` - Update rating/review
+- `DELETE /api/ratings/:id` - Delete rating/review
+- `GET /api/movies/:id/ratings` - Get movie reviews
+
+### Watchlist
+- `POST /api/watchlist` - Add to watchlist
+- `DELETE /api/watchlist/:movieId` - Remove from watchlist
+- `GET /api/user/watchlist` - Get user's watchlist
+
+### Social
+- `GET /api/friends` - List friends
+- `POST /api/friends/request` - Send friend request
+- `POST /api/friends/accept` - Accept request
+- `DELETE /api/friends/:userId` - Remove friend
+
+### Messages (WebSocket + REST)
+- `GET /api/messages/:userId` - Get chat history
+- `POST /api/messages` - Send message (updates via Socket.io)
+- Real-time notifications via Socket.io
+
+### Lists
+- `POST /api/lists` - Create custom list
+- `PATCH /api/lists/:id` - Update list
+- `DELETE /api/lists/:id` - Delete list
+- `POST /api/lists/:id/movies` - Add movie to list
+
+### Clubs
+- `POST /api/clubs` - Create club
+- `GET /api/clubs` - List clubs
+- `GET /api/clubs/:id` - Get club details
+- `POST /api/clubs/:id/join` - Join club
+
+### Admin
+- `GET /api/admin/overview` - Dashboard stats
+- `GET /api/admin/users` - User management
+- `PATCH /api/admin/users/:userId/ban` - Ban/unban user
+- `GET /api/admin/reviews` - Moderation queue
+- `DELETE /api/admin/reviews/:ratingId` - Remove review
+
+### Recommendations
+- `GET /api/recommendations` - Get personalized recommendations
+- Uses multi-seed algorithm, friend activity, and genre matching
+
+### Statistics
+- `GET /api/stats/user` - Personal viewing stats
+- `GET /api/stats/trending` - Global trending stats
+
+### Feed & Activity
+- `GET /api/feed` - Personal activity feed
+- Tracks: ratings, reviews, watchlist adds, watched movies
+
+## 🔐 Security Features
+
+- **JWT Authentication** - Secure token-based auth
+- **Admin Allowlist** - Only approved admins can access admin features
+- **Database Constraints** - Prevents duplicate watchlist entries
+- **Input Validation** - Server-side validation on all inputs
+- **CORS Protection** - Restricted to allowed origins
+
+## 🎨 Frontend Routes
+
+| Route | Purpose |
+|-------|---------|
+| `/` | Landing page with hero + trending grid |
+| `/login` | Login page |
+| `/signup` | Registration page |
+| `/dashboard` | Personal feed + quick actions |
+| `/discover` | Browse trending, popular, top-rated |
+| `/movie/:id` | Movie details, ratings, reviews |
+| `/watchlist` | Your watchlist with poster grid |
+| `/lists` | Custom movie lists |
+| `/lists/:id` | List details |
+| `/clubs` | Browse & join clubs |
+| `/clubs/:id` | Club community page |
+| `/friends` | Friends list |
+| `/friends/requests` | Pending friend requests |
+| `/friends/suggestions` | Suggested friends |
+| `/profile/:username` | User profile with stats |
+| `/user/:username` | Alternate profile view |
+| `/stats` | Personal viewing statistics |
+| `/settings` | User preferences |
+| `/admin` | Admin dashboard (admins only) |
+
+## 💾 Database Schema
+
+Key tables:
+- **users** - Account info with JWT support
+- **ratings** - Movie ratings & reviews
+- **watchlist** - User watchlist entries
+- **friends** - Friend connections & requests
+- **messages** - Private chat messages
+- **lists** - Custom movie lists
+- **list_movies** - Movies in lists
+- **clubs** - Movie communities
+- **club_members** - Club memberships
+
+## 📦 Key NPM Scripts
+
+**Backend:**
+```bash
+npm run dev      # Start development server
+npm run db:init  # Initialize database schema
+```
+
+**Frontend:**
+```bash
+npm run dev      # Start development server
+npm run build    # Build for production
+npm run start    # Run production build
+```
+
+## 🐳 Docker Deployment
 
 ```bash
-npm run db:init
+# Build images
+docker-compose build
+
+# Start services with detached mode
+docker-compose up -d
+
+# View logs
+docker-compose logs -f backend
+docker-compose logs -f frontend
+
+# Stop services
+docker-compose down
+```
+
+## 🔄 Recent Updates
+
+- ✅ Implemented Socket.io real-time chat
+- ✅ Added Trending Cache service for performance
+- ✅ Movie clubs with membership management
+- ✅ Admin dashboard with moderation tools
+- ✅ Friend recommendation algorithm
+- ✅ Personalized movie recommendations
+- ✅ User profile tabs (ratings, reviews, lists, stats)
+- ✅ Activity feed with friend activity tracking
+
+## 📝 Contributing
+
+1. Create feature branch (`git checkout -b feature/feature-name`)
+2. Commit changes (`git commit -m 'Add feature'`)
+3. Push to branch (`git push origin feature/feature-name`)
+4. Open Pull Request
+
+## 📄 License
+
+[Add your license here]
 npm run dev
 ```
 
